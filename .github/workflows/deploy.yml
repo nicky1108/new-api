@@ -136,6 +136,8 @@ jobs:
           scp -i ~/.ssh/deploy_key deploy/favicon.svg "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/favicon.svg"
           scp -i ~/.ssh/deploy_key deploy/nginx-openhubs.xyz.conf "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/nginx-openhubs.xyz.conf"
           scp -i ~/.ssh/deploy_key deploy/remote-deploy.sh "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/remote-deploy.sh"
+          ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "mkdir -p '${APP_DIR}/docs/user-guide'"
+          scp -i ~/.ssh/deploy_key deploy/docs/user-guide/index.html "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/docs/user-guide/index.html"
 
       - name: Write production environment
         run: |

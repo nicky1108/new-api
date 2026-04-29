@@ -97,10 +97,17 @@ const rootElement = document.getElementById('root')!
     if (typeof window === 'undefined' || typeof document === 'undefined') return
     const apply = (name: string) => {
       document.title = name
-      const metaTitle = document.querySelector(
-        'meta[name="title"]'
-      ) as HTMLMetaElement | null
-      if (metaTitle) metaTitle.setAttribute('content', name)
+      const titleSelectors = [
+        'meta[name="title"]',
+        'meta[property="og:title"]',
+        'meta[name="twitter:title"]',
+      ]
+      for (const selector of titleSelectors) {
+        const metaTitle = document.querySelector(
+          selector
+        ) as HTMLMetaElement | null
+        if (metaTitle) metaTitle.setAttribute('content', name)
+      }
     }
     // Cache-first
     try {

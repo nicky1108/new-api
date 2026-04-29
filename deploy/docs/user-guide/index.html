@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>openhubs 用户使用指南</title>
+    <meta name="description" content="openhubs 注册登录、创建 API Key、调用 API、查看用量、充值订阅和账号安全指南。" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --border: #dbe3ee;
+        --accent: #0f766e;
+        --accent-soft: #ccfbf1;
+        --code: #0b1220;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.75;
+      }
+      header {
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .hero {
+        padding: 56px 24px 34px;
+      }
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(34px, 6vw, 58px);
+        line-height: 1.08;
+        letter-spacing: 0;
+      }
+      .lead {
+        max-width: 760px;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 28px;
+        padding: 30px 24px 64px;
+      }
+      nav {
+        position: sticky;
+        top: 20px;
+        align-self: start;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 16px;
+      }
+      nav a {
+        display: block;
+        padding: 7px 8px;
+        border-radius: 6px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 14px;
+      }
+      nav a:hover {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      article {
+        min-width: 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 34px;
+      }
+      h2 {
+        margin: 42px 0 12px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+        font-size: 28px;
+        line-height: 1.25;
+      }
+      h2:first-child {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+      }
+      h3 {
+        margin: 28px 0 8px;
+        font-size: 20px;
+      }
+      p,
+      ul,
+      ol {
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        overflow-wrap: anywhere;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f1f5f9;
+        color: var(--text);
+      }
+      code {
+        border-radius: 5px;
+        background: #e2e8f0;
+        padding: 2px 5px;
+        color: var(--code);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+      }
+      pre {
+        overflow-x: auto;
+        border-radius: 8px;
+        background: #0b1220;
+        padding: 16px;
+      }
+      pre code {
+        background: transparent;
+        padding: 0;
+        color: #e2e8f0;
+      }
+      .notice {
+        border-left: 4px solid var(--accent);
+        border-radius: 6px;
+        background: #f0fdfa;
+        padding: 14px 16px;
+        color: #115e59;
+      }
+      @media (max-width: 860px) {
+        main {
+          display: block;
+        }
+        nav {
+          position: static;
+          margin-bottom: 18px;
+        }
+        article {
+          padding: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap hero">
+        <p class="eyebrow">openhubs docs</p>
+        <h1>用户使用指南</h1>
+        <p class="lead">
+          从注册账号、创建 API Key 到接入代码、查看用量、充值订阅和保护账号安全，这一页覆盖普通用户的主要使用流程。
+        </p>
+      </div>
+    </header>
+    <main class="wrap">
+      <nav aria-label="目录">
+        <a href="#quick-start">快速上手</a>
+        <a href="#account">注册与登录</a>
+        <a href="#security">个人资料与安全</a>
+        <a href="#keys">API Key</a>
+        <a href="#playground">Playground</a>
+        <a href="#api">调用 API</a>
+        <a href="#apps">聊天应用接入</a>
+        <a href="#logs">使用记录</a>
+        <a href="#wallet">钱包与充值</a>
+        <a href="#subscription">订阅计划</a>
+        <a href="#pricing">模型定价</a>
+        <a href="#faq">常见问题</a>
+      </nav>
+      <article>
+        <section id="quick-start">
+          <h2>快速上手</h2>
+          <ol>
+            <li>打开站点并注册账号：<code>/sign-up</code></li>
+            <li>登录账号：<code>/sign-in</code></li>
+            <li>进入个人资料检查邮箱、安全设置和可用模型：<code>/profile</code></li>
+            <li>进入 API Keys 创建 API Key：<code>/keys</code></li>
+            <li>进入 Playground 测试模型：<code>/playground</code></li>
+            <li>在自己的应用或代码中配置 <code>base_url</code> 和 API Key。</li>
+            <li>进入 Usage Logs 查看调用记录：<code>/usage-logs/common</code></li>
+            <li>余额不足时进入 Wallet 充值或兑换：<code>/wallet</code></li>
+          </ol>
+          <p class="notice">
+            如果页面布局与本文略有不同，通常是管理员切换了前端主题、隐藏了模块，或关闭了在线充值、订阅、异步任务等功能。
+          </p>
+        </section>
+
+        <section id="account">
+          <h2>注册与登录</h2>
+          <h3>注册账号</h3>
+          <ol>
+            <li>访问 <code>/sign-up</code>。</li>
+            <li>填写用户名、密码和邮箱。</li>
+            <li>如需邮箱验证码，点击发送验证码，到邮箱中复制验证码并填回页面。</li>
+            <li>提交注册表单，成功后即可进入控制台。</li>
+          </ol>
+          <h3>登录账号</h3>
+          <p>
+            访问 <code>/sign-in</code>，使用用户名和密码登录。若站点开启第三方登录，可选择 GitHub、Discord、LinuxDO 等 OAuth 入口。若已开启 2FA，登录时还需要输入验证器 App 中的动态验证码。
+          </p>
+          <h3>忘记密码</h3>
+          <p>在登录页点击忘记密码，输入绑定邮箱，按邮件中的重置链接或验证码完成新密码设置。</p>
+        </section>
+
+        <section id="security">
+          <h2>个人资料与账号安全</h2>
+          <p>进入 <code>/profile</code> 管理账号资料、安全设置、通知和可用模型。</p>
+          <ul>
+            <li>基本资料：修改用户名、绑定邮箱、更改密码。</li>
+            <li>双因素认证：使用 Google Authenticator、Microsoft Authenticator 或其他 TOTP 验证器扫码绑定。备用码只展示一次，请妥善保存。</li>
+            <li>Passkey：支持使用指纹、面容识别、系统密码或硬件安全密钥登录。</li>
+            <li>第三方账号绑定：绑定 GitHub、Discord 等账号后，可用第三方账号快速登录。</li>
+            <li>可用模型：复制当前账号可调用的完整模型名称，用于 API 调用。</li>
+          </ul>
+        </section>
+
+        <section id="keys">
+          <h2>创建和管理 API Key</h2>
+          <p>API Key 是调用 openhubs API 的凭证。进入 <code>/keys</code> 创建和管理。</p>
+          <ol>
+            <li>点击 Create API Key。</li>
+            <li>填写名称，建议按用途命名，例如 <code>local-dev</code>、<code>production-web</code>、<code>cursor</code>。</li>
+            <li>按需设置配额、过期时间、模型限制和 IP 白名单。</li>
+            <li>提交后立即复制完整 Key。完整 Key 通常只在创建时展示一次。</li>
+          </ol>
+          <table>
+            <thead>
+              <tr><th>配置项</th><th>用途</th><th>建议</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>配额</td><td>限制单个 Key 最多可消耗的额度</td><td>给测试、外部工具、团队成员单独设置上限</td></tr>
+              <tr><td>过期时间</td><td>到期后 Key 自动失效</td><td>临时用途设置短期限，长期服务定期轮换</td></tr>
+              <tr><td>模型限制</td><td>限制 Key 只能调用指定模型</td><td>防止误用高成本模型</td></tr>
+              <tr><td>IP 白名单</td><td>限制允许请求的来源 IP</td><td>生产服务可配合固定出口 IP 使用</td></tr>
+            </tbody>
+          </table>
+          <p>如果怀疑 Key 泄露，请立即删除或停用该 Key，并在相关应用中替换为新 Key。不要把 Key 提交到 Git 仓库、公开文档、前端代码或截图中。</p>
+        </section>
+
+        <section id="playground">
+          <h2>使用 Playground 测试模型</h2>
+          <p>进入 <code>/playground</code> 可直接测试模型，无需写代码。</p>
+          <ol>
+            <li>选择一个可用模型。</li>
+            <li>在输入框中输入消息。</li>
+            <li>点击发送，等待模型回复。</li>
+            <li>如果请求失败，检查模型是否可用、API Key 是否有效、账户余额是否充足。</li>
+          </ol>
+        </section>
+
+        <section id="api">
+          <h2>调用 API</h2>
+          <p>openhubs 提供兼容 OpenAI 风格的接口。接入时通常只需要替换两项：</p>
+          <ul>
+            <li><code>base_url</code>：<code>https://openhubs.xyz/v1</code></li>
+            <li><code>api_key</code>：你在 <code>/keys</code> 创建的 API Key</li>
+          </ul>
+          <h3>Python 示例</h3>
+          <pre><code>from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-your-openhubs-key",
+    base_url="https://openhubs.xyz/v1",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role": "user", "content": "你好，请用一句话介绍 openhubs。"}
+    ],
+)
+
+print(response.choices[0].message.content)</code></pre>
+          <h3>cURL 示例</h3>
+          <pre><code>curl https://openhubs.xyz/v1/chat/completions \
+  -H "Authorization: Bearer sk-your-openhubs-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'</code></pre>
+          <table>
+            <thead>
+              <tr><th>能力</th><th>路径</th><th>用途</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>聊天补全</td><td><code>POST /v1/chat/completions</code></td><td>多轮对话、问答、内容生成</td></tr>
+              <tr><td>Embeddings</td><td><code>POST /v1/embeddings</code></td><td>文本向量化</td></tr>
+              <tr><td>图像生成</td><td><code>POST /v1/images/generations</code></td><td>文生图</td></tr>
+              <tr><td>语音识别</td><td><code>POST /v1/audio/transcriptions</code></td><td>音频转文字</td></tr>
+              <tr><td>语音合成</td><td><code>POST /v1/audio/speech</code></td><td>文字转语音</td></tr>
+              <tr><td>模型列表</td><td><code>GET /v1/models</code></td><td>查询当前 Key 可用模型</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="apps">
+          <h2>接入聊天应用</h2>
+          <p>很多聊天客户端支持自定义 OpenAI 兼容接口。通用配置如下：</p>
+          <table>
+            <thead>
+              <tr><th>配置项</th><th>填写内容</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>API Base URL</td><td><code>https://openhubs.xyz/v1</code></td></tr>
+              <tr><td>API Key</td><td>在 <code>/keys</code> 创建的 Key</td></tr>
+              <tr><td>Model</td><td>在个人资料、定价页或模型列表中复制的模型名</td></tr>
+            </tbody>
+          </table>
+          <p>如果目标应用不支持一键导入，在应用设置里找到 OpenAI Compatible、自定义 API 或 API Provider 区域，填写 Base URL、API Key 和模型名后发送一条测试消息。</p>
+        </section>
+
+        <section id="logs">
+          <h2>查看使用记录</h2>
+          <p>进入 <code>/usage-logs/common</code> 查看普通 API 调用记录。日志通常包含调用时间、模型名称、API Key、输入输出 Token、消耗配额、请求状态和错误信息。</p>
+          <p>如果站点启用了绘图或异步任务功能，可切换到 <code>/usage-logs/drawing</code> 或 <code>/usage-logs/task</code>。</p>
+          <table>
+            <thead>
+              <tr><th>状态</th><th>含义</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>PENDING</code></td><td>已提交，等待处理</td></tr>
+              <tr><td><code>IN_PROGRESS</code></td><td>正在生成</td></tr>
+              <tr><td><code>SUCCESS</code></td><td>已完成，可查看结果</td></tr>
+              <tr><td><code>FAILURE</code></td><td>生成失败，通常会按规则退还或修正配额</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="wallet">
+          <h2>钱包、充值与兑换码</h2>
+          <p>进入 <code>/wallet</code> 查看余额、充值、兑换码、邀请奖励和订阅计划。</p>
+          <h3>在线充值</h3>
+          <ol>
+            <li>选择充值金额，或输入自定义金额。</li>
+            <li>选择支付方式，例如 EPay、Stripe、Creem、Waffo 等。</li>
+            <li>确认金额并跳转支付。</li>
+            <li>支付完成后返回 openhubs，等待余额刷新。</li>
+          </ol>
+          <h3>兑换码充值</h3>
+          <ol>
+            <li>在钱包页找到兑换码输入框。</li>
+            <li>粘贴管理员提供的兑换码。</li>
+            <li>点击兑换，成功后余额会增加。</li>
+          </ol>
+          <h3>邀请返利</h3>
+          <p>钱包页可能显示专属邀请链接。复制链接邀请新用户注册；被邀请用户产生消费后，返利额度会进入奖励余额，按页面提示转入主余额后即可使用。</p>
+        </section>
+
+        <section id="subscription">
+          <h2>订阅计划</h2>
+          <p>如果站点配置了订阅计划，钱包页会展示可购买套餐和当前订阅状态。购买前请确认套餐价格、有效期、包含配额、配额重置周期、是否允许重复购买以及是否支持自动续费。</p>
+          <p>如果同时拥有钱包余额和订阅额度，页面可能提供扣费偏好设置，例如优先使用订阅额度或优先使用钱包余额。实际扣费规则以页面展示和管理员配置为准。</p>
+        </section>
+
+        <section id="pricing">
+          <h2>查看模型定价</h2>
+          <p>进入 <code>/pricing</code> 查看模型价格。你可以搜索模型名称、查看输入价格和输出价格，并对比不同模型的成本。</p>
+          <p>实际扣费可能受到用户分组倍率、模型倍率、订阅抵扣、缓存 Token、图片/音频计费等因素影响。最终以使用记录中的扣费明细为准。</p>
+        </section>
+
+        <section id="faq">
+          <h2>常见问题</h2>
+          <h3>为什么提示余额不足？</h3>
+          <p>可能是钱包余额不足、API Key 设置了单独配额上限、订阅额度已用完，或高价模型的预扣额度超过当前余额。请到 <code>/wallet</code>、<code>/keys</code> 和 <code>/pricing</code> 分别检查。</p>
+          <h3>为什么某个模型不可用？</h3>
+          <p>可能是当前账号分组没有权限、API Key 设置了模型限制、上游渠道暂时不可用，或管理员禁用了该模型。请先在 <code>/profile</code> 查看可用模型，再到 <code>/playground</code> 测试。</p>
+          <h3>为什么请求被限流？</h3>
+          <p>可能是站点全局限流、用户分组限流或 API Key 级限流生效。降低请求频率、增加重试退避，或联系管理员调整策略。</p>
+          <h3>如何排查 API 调用失败？</h3>
+          <ol>
+            <li>确认 API Base URL 是 <code>https://openhubs.xyz/v1</code>。</li>
+            <li>确认 API Key 复制完整。</li>
+            <li>确认模型名正确。</li>
+            <li>确认余额充足。</li>
+            <li>确认 Key 未过期、未超额、未限制该模型。</li>
+            <li>查看 <code>/usage-logs/common</code> 中的错误详情。</li>
+          </ol>
+          <h3>classic 旧主题路径对照</h3>
+          <table>
+            <thead>
+              <tr><th>功能</th><th>default 路径</th><th>classic 路径</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>控制台首页</td><td><code>/dashboard</code></td><td><code>/console</code></td></tr>
+              <tr><td>API Key</td><td><code>/keys</code></td><td><code>/console/token</code></td></tr>
+              <tr><td>Playground</td><td><code>/playground</code></td><td><code>/console/playground</code></td></tr>
+              <tr><td>钱包</td><td><code>/wallet</code></td><td><code>/console/topup</code></td></tr>
+              <tr><td>个人设置</td><td><code>/profile</code></td><td><code>/console/personal</code></td></tr>
+              <tr><td>使用记录</td><td><code>/usage-logs/common</code></td><td><code>/console/log</code></td></tr>
+              <tr><td>任务记录</td><td><code>/usage-logs/task</code></td><td><code>/console/task</code></td></tr>
+              <tr><td>定价</td><td><code>/pricing</code></td><td><code>/pricing</code></td></tr>
+            </tbody>
+          </table>
+        </section>
+      </article>
+    </main>
+  </body>
+</html>
