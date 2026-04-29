@@ -123,7 +123,39 @@ openhubs 提供兼容 OpenAI 风格的接口。接入时通常只需要替换两
 - `base_url`：改为 openhubs 的 API 地址，通常为 `https://openhubs.xyz/v1`
 - `api_key`：填写你在 `/keys` 创建的 API Key
 
-### Python 示例
+### Base URL 写法
+
+不同工具对 Base URL 的字段名略有差异，但填写内容相同：
+
+| 场景 | 填写方式 |
+| --- | --- |
+| OpenAI SDK | `base_url="https://openhubs.xyz/v1"` |
+| 聊天客户端 | `API Base URL` 填 `https://openhubs.xyz/v1` |
+| 直接 HTTP 调用 | 请求完整地址以 `https://openhubs.xyz/v1/...` 开头 |
+
+不要把接口路径重复写两次。例如 SDK 里已经配置了 `https://openhubs.xyz/v1`，调用聊天接口时 SDK 会自动请求 `/chat/completions`，不需要把 Base URL 写成 `https://openhubs.xyz/v1/chat/completions`。
+
+### API Key 鉴权
+
+所有 API 请求都需要在 HTTP Header 中携带 Bearer Token：
+
+```http
+Authorization: Bearer sk-your-openhubs-key
+Content-Type: application/json
+```
+
+其中 `sk-your-openhubs-key` 替换为你在 `/keys` 创建的完整 API Key。不要把 Key 放在 URL 查询参数中，也不要写进前端公开代码或 Git 仓库。
+
+可以先用模型列表接口验证 Base URL 和 Key 是否正确：
+
+```bash
+curl https://openhubs.xyz/v1/models \
+  -H "Authorization: Bearer sk-your-openhubs-key"
+```
+
+如果返回可用模型列表，说明地址和鉴权基本正常。
+
+### Python：单轮对话
 
 ```python
 from openai import OpenAI
@@ -143,7 +175,7 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-### cURL 示例
+### cURL：单轮对话
 
 ```bash
 curl https://openhubs.xyz/v1/chat/completions \
@@ -155,6 +187,110 @@ curl https://openhubs.xyz/v1/chat/completions \
       {"role": "user", "content": "Hello!"}
     ]
   }'
+```
+
+### cURL：多轮对话
+
+多轮对话需要把历史消息一起发送给接口。常见顺序是 `system`、`user`、`assistant`、`user`：
+
+```bash
+curl https://openhubs.xyz/v1/chat/completions \
+  -H "Authorization: Bearer sk-your-openhubs-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {"role": "system", "content": "你是一个简洁、准确的中文助手。"},
+      {"role": "user", "content": "openhubs 的 Base URL 是什么？"},
+      {"role": "assistant", "content": "Base URL 是 https://openhubs.xyz/v1。"},
+      {"role": "user", "content": "那 API Key 应该放在哪里？"}
+    ]
+  }'
+```
+
+### cURL：流式对话
+
+如果客户端支持 Server-Sent Events，可以设置 `stream: true` 获取边生成边返回的结果：
+
+```bash
+curl -N https://openhubs.xyz/v1/chat/completions \
+  -H "Authorization: Bearer sk-your-openhubs-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "用三点说明如何保护 API Key。"}
+    ]
+  }'
+```
+
+### Python：流式对话
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-your-openhubs-key",
+    base_url="https://openhubs.xyz/v1",
+)
+
+stream = client.chat.completions.create(
+    model="gpt-4o-mini",
+    stream=True,
+    messages=[
+        {"role": "user", "content": "写一段 100 字以内的产品介绍。"}
+    ],
+)
+
+for chunk in stream:
+    delta = chunk.choices[0].delta.content
+    if delta:
+        print(delta, end="")
+```
+
+### cURL：图片生成
+
+图片生成使用 `POST /v1/images/generations`。模型名以你的可用模型或定价页展示为准；如果管理员配置的是其他图像模型，请替换示例中的 `gpt-image-1`。
+
+```bash
+curl https://openhubs.xyz/v1/images/generations \
+  -H "Authorization: Bearer sk-your-openhubs-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-image-1",
+    "prompt": "一张干净现代的 openhubs 控制台宣传图，浅色背景，科技感",
+    "size": "1024x1024",
+    "n": 1
+  }'
+```
+
+接口通常会返回图片 URL 或 Base64 图片数据，具体取决于上游模型和管理员配置。请根据返回结果中的 `url` 或 `b64_json` 字段保存图片。
+
+### Python：图片生成并保存 Base64 图片
+
+```python
+import base64
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-your-openhubs-key",
+    base_url="https://openhubs.xyz/v1",
+)
+
+image = client.images.generate(
+    model="gpt-image-1",
+    prompt="一枚 openhubs 风格的应用图标，简洁，白底，绿色点缀",
+    size="1024x1024",
+    n=1,
+)
+
+item = image.data[0]
+if getattr(item, "b64_json", None):
+    with open("openhubs-image.png", "wb") as f:
+        f.write(base64.b64decode(item.b64_json))
+else:
+    print(item.url)
 ```
 
 ### 常用接口
