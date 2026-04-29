@@ -67,7 +67,7 @@
 
 ### 可用模型
 
-个人资料页通常会展示当前账号可调用的模型列表。复制模型名称时请保留完整字符串，例如 `gpt-4o-mini` 或管理员配置的自定义模型名。
+个人资料页通常会展示当前账号可调用的模型列表。复制模型名称时请保留完整字符串，例如 `gpt-5.4-mini` 或管理员配置的自定义模型名。
 
 ## 创建和管理 API Key
 
@@ -166,7 +166,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="gpt-5.4-mini",
     messages=[
         {"role": "user", "content": "你好，请用一句话介绍 openhubs。"}
     ],
@@ -182,7 +182,7 @@ curl https://openhubs.xyz/v1/chat/completions \
   -H "Authorization: Bearer sk-your-openhubs-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-4o-mini",
+    "model": "gpt-5.4-mini",
     "messages": [
       {"role": "user", "content": "Hello!"}
     ]
@@ -198,7 +198,7 @@ curl https://openhubs.xyz/v1/chat/completions \
   -H "Authorization: Bearer sk-your-openhubs-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-4o-mini",
+    "model": "gpt-5.4-mini",
     "messages": [
       {"role": "system", "content": "你是一个简洁、准确的中文助手。"},
       {"role": "user", "content": "openhubs 的 Base URL 是什么？"},
@@ -217,7 +217,7 @@ curl -N https://openhubs.xyz/v1/chat/completions \
   -H "Authorization: Bearer sk-your-openhubs-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-4o-mini",
+    "model": "gpt-5.4-mini",
     "stream": true,
     "messages": [
       {"role": "user", "content": "用三点说明如何保护 API Key。"}
@@ -236,7 +236,7 @@ client = OpenAI(
 )
 
 stream = client.chat.completions.create(
-    model="gpt-4o-mini",
+    model="gpt-5.4-mini",
     stream=True,
     messages=[
         {"role": "user", "content": "写一段 100 字以内的产品介绍。"}
@@ -251,14 +251,14 @@ for chunk in stream:
 
 ### cURL：图片生成
 
-图片生成使用 `POST /v1/images/generations`。模型名以你的可用模型或定价页展示为准；如果管理员配置的是其他图像模型，请替换示例中的 `gpt-image-1`。
+图片生成使用 `POST /v1/images/generations`。模型名以你的可用模型或定价页展示为准；如果管理员配置的是其他图像模型，请替换示例中的 `gpt-image-2`。
 
 ```bash
 curl https://openhubs.xyz/v1/images/generations \
   -H "Authorization: Bearer sk-your-openhubs-key" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-image-1",
+    "model": "gpt-image-2",
     "prompt": "一张干净现代的 openhubs 控制台宣传图，浅色背景，科技感",
     "size": "1024x1024",
     "n": 1
@@ -279,7 +279,7 @@ client = OpenAI(
 )
 
 image = client.images.generate(
-    model="gpt-image-1",
+    model="gpt-image-2",
     prompt="一枚 openhubs 风格的应用图标，简洁，白底，绿色点缀",
     size="1024x1024",
     n=1,
