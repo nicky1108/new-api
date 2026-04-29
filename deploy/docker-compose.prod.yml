@@ -1,0 +1,76 @@
+services:
+  new-api:
+    image: ${NEW_API_IMAGE:?NEW_API_IMAGE is required}
+    container_name: new-api
+    restart: unless-stopped
+    command: --log-dir /app/logs
+    ports:
+      - "127.0.0.1:${NEW_API_PORT:-3000}:3000"
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
+    environment:
+      SQL_DSN: postgresql://${POSTGRES_USER:-newapi}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-newapi}
+      REDIS_CONN_STRING: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://openhubs.xyz}
+      TZ: ${TZ:-Asia/Shanghai}
+      ERROR_LOG_ENABLED: "true"
+      BATCH_UPDATE_ENABLED: "true"
+      NODE_NAME: ${NODE_NAME:-new-api-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -q '\"success\"[[:space:]]*:[[:space:]]*true'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - new-api
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: new-api-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-newapi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-newapi}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-newapi} -d ${POSTGRES_DB:-newapi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - new-api
+
+  redis:
+    image: redis:7-alpine
+    container_name: new-api-redis
+    restart: unless-stopped
+    command: ["sh", "-c", "redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - new-api
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  new-api:
+    name: new-api
