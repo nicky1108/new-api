@@ -177,24 +177,11 @@ export function Footer(props: FooterProps) {
         </div>
 
         {/* Bottom section */}
-        <div className='border-border/30 mt-12 flex flex-col items-center justify-between gap-3 border-t pt-6 sm:flex-row'>
+        <div className='border-border/30 mt-12 flex items-center justify-center border-t pt-6 text-center'>
           <p className='text-muted-foreground/40 text-xs'>
             &copy; {currentYear} {displayName}.{' '}
             {props.copyright ?? t('footer.defaultCopyright')}
           </p>
-          <div className='flex items-center gap-2'>
-            <span className='text-muted-foreground/40 text-xs'>
-              {t('Designed and Developed by')}{' '}
-            </span>
-            <a
-              href='https://github.com/QuantumNous/new-api'
-              target='_blank'
-              rel='noopener noreferrer'
-              className='text-primary text-xs font-medium hover:underline'
-            >
-              {t('New API')}
-            </a>
-          </div>
         </div>
       </div>
     </footer>
