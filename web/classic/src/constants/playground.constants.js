@@ -83,7 +83,9 @@ export const DEBUG_TABS = {
 export const API_ENDPOINTS = {
   CHAT_COMPLETIONS: '/pg/chat/completions',
   IMAGE_GENERATIONS: '/pg/images/generations',
+  IMAGE_GENERATIONS_STREAM: '/pg/images/generations/stream',
   IMAGE_EDITS: '/pg/images/edits',
+  IMAGE_EDITS_STREAM: '/pg/images/edits/stream',
   USER_MODELS: '/api/user/models',
   USER_GROUPS: '/api/user/self/groups',
 };

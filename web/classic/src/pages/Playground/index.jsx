@@ -304,7 +304,7 @@ const Playground = () => {
         const payload = buildImageGenerationPayload(content, inputs);
 
         sendRequest(payload, false, {
-          endpoint: API_ENDPOINTS.IMAGE_GENERATIONS,
+          endpoint: API_ENDPOINTS.IMAGE_GENERATIONS_STREAM,
           requestType: 'image',
           debugPayload: payload,
         });
@@ -349,7 +349,7 @@ const Playground = () => {
         };
 
         sendRequest(formData, false, {
-          endpoint: API_ENDPOINTS.IMAGE_EDITS,
+          endpoint: API_ENDPOINTS.IMAGE_EDITS_STREAM,
           requestType: 'image',
           debugPayload,
         });

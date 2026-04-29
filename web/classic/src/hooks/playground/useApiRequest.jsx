@@ -34,6 +34,47 @@ import {
   normalizeAssistantContent,
 } from '../../helpers';
 
+const parsePlaygroundImageStreamResult = (streamText) => {
+  const blocks = streamText
+    .split(/\r?\n\r?\n/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  for (let i = blocks.length - 1; i >= 0; i -= 1) {
+    const lines = blocks[i].split(/\r?\n/);
+    const hasResultEvent = lines.some((line) => line.trim() === 'event: result');
+    if (!hasResultEvent) {
+      continue;
+    }
+
+    const data = lines
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.slice(5).trimStart())
+      .join('\n');
+
+    if (!data) {
+      break;
+    }
+    return JSON.parse(data);
+  }
+
+  throw new Error('图片请求连接已结束，但未收到最终响应');
+};
+
+const getImageStreamBody = (streamResult) => {
+  if (streamResult?.body !== undefined && streamResult.body !== null) {
+    return streamResult.body;
+  }
+  if (streamResult?.text) {
+    try {
+      return JSON.parse(streamResult.text);
+    } catch (_) {
+      return { message: streamResult.text };
+    }
+  }
+  return {};
+};
+
 export const useApiRequest = (
   setMessage,
   setDebugData,
@@ -353,7 +394,31 @@ export const useApiRequest = (
           throw err;
         }
 
-        const data = await response.json();
+        let data = null;
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('text/event-stream')) {
+          const streamText = await response.text();
+          const streamResult = parsePlaygroundImageStreamResult(streamText);
+          data = getImageStreamBody(streamResult);
+
+          if (
+            streamResult.status &&
+            (streamResult.status < 200 || streamResult.status >= 300)
+          ) {
+            const parsedError = data?.error || null;
+            const err = new Error(
+              parsedError?.message ||
+                data?.message ||
+                `HTTP error! status: ${streamResult.status}`,
+            );
+            err.errorCode = parsedError?.code || null;
+            err.errorType = parsedError?.type || null;
+            throw err;
+          }
+        } else {
+          data = await response.json();
+        }
+
         setDebugData((prev) => ({
           ...prev,
           response: JSON.stringify(data, null, 2),
