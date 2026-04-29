@@ -34,7 +34,7 @@ import {
   normalizeAssistantContent,
 } from '../../helpers';
 
-const parsePlaygroundImageStreamResult = (streamText) => {
+const findPlaygroundImageStreamResult = (streamText) => {
   const blocks = streamText
     .split(/\r?\n\r?\n/)
     .map((block) => block.trim())
@@ -55,10 +55,61 @@ const parsePlaygroundImageStreamResult = (streamText) => {
     if (!data) {
       break;
     }
-    return JSON.parse(data);
+    try {
+      return JSON.parse(data);
+    } catch (_) {
+      return null;
+    }
   }
 
+  return null;
+};
+
+const parsePlaygroundImageStreamResult = (streamText) => {
+  const result = findPlaygroundImageStreamResult(streamText);
+  if (result) {
+    return result;
+  }
   throw new Error('图片请求连接已结束，但未收到最终响应');
+};
+
+const readPlaygroundImageStreamResult = async (response) => {
+  if (!response.body?.getReader) {
+    return parsePlaygroundImageStreamResult(await response.text());
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let streamText = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        streamText += decoder.decode();
+        break;
+      }
+
+      streamText += decoder.decode(value, { stream: true });
+      const result = findPlaygroundImageStreamResult(streamText);
+      if (result) {
+        await reader.cancel().catch(() => {});
+        return result;
+      }
+    }
+  } catch (error) {
+    const result = findPlaygroundImageStreamResult(streamText);
+    if (result) {
+      return result;
+    }
+    throw error;
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch (_) {}
+  }
+
+  return parsePlaygroundImageStreamResult(streamText);
 };
 
 const getImageStreamBody = (streamResult) => {
@@ -397,8 +448,7 @@ export const useApiRequest = (
         let data = null;
         const contentType = response.headers.get('content-type') || '';
         if (contentType.includes('text/event-stream')) {
-          const streamText = await response.text();
-          const streamResult = parsePlaygroundImageStreamResult(streamText);
+          const streamResult = await readPlaygroundImageStreamResult(response);
           data = getImageStreamBody(streamResult);
 
           if (
