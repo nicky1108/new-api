@@ -11,6 +11,8 @@ cd "$APP_DIR"
 
 mkdir -p data logs
 chmod 700 "$APP_DIR"
+install -d -m 0755 /var/www/openhubs
+install -m 0644 favicon.svg /var/www/openhubs/favicon.svg
 
 docker compose pull
 docker compose up -d --remove-orphans

@@ -133,6 +133,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "mkdir -p '${APP_DIR}'"
           scp -i ~/.ssh/deploy_key deploy/docker-compose.prod.yml "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/docker-compose.yml"
+          scp -i ~/.ssh/deploy_key deploy/favicon.svg "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/favicon.svg"
           scp -i ~/.ssh/deploy_key deploy/nginx-openhubs.xyz.conf "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/nginx-openhubs.xyz.conf"
           scp -i ~/.ssh/deploy_key deploy/remote-deploy.sh "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/remote-deploy.sh"
 
