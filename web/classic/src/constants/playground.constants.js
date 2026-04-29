@@ -86,6 +86,7 @@ export const API_ENDPOINTS = {
   IMAGE_GENERATIONS_STREAM: '/pg/images/generations/stream',
   IMAGE_EDITS: '/pg/images/edits',
   IMAGE_EDITS_STREAM: '/pg/images/edits/stream',
+  IMAGE_JOBS: '/pg/images/jobs',
   USER_MODELS: '/api/user/models',
   USER_GROUPS: '/api/user/self/groups',
 };

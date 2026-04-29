@@ -34,17 +34,22 @@ import {
   normalizeAssistantContent,
 } from '../../helpers';
 
-const findPlaygroundImageStreamResult = (streamText) => {
+const parsePlaygroundImageStreamEvents = (streamText) => {
   const blocks = streamText
     .split(/\r?\n\r?\n/)
     .map((block) => block.trim())
     .filter(Boolean);
+  const state = {
+    jobId: null,
+    result: null,
+  };
 
-  for (let i = blocks.length - 1; i >= 0; i -= 1) {
-    const lines = blocks[i].split(/\r?\n/);
-    const hasResultEvent = lines.some((line) => line.trim() === 'event: result');
-    if (!hasResultEvent) {
-      continue;
+  blocks.forEach((block) => {
+    const lines = block.split(/\r?\n/);
+    const eventLine = lines.find((line) => line.startsWith('event:'));
+    const eventName = eventLine ? eventLine.slice(6).trim() : 'message';
+    if (eventName !== 'job' && eventName !== 'result') {
+      return;
     }
 
     const data = lines
@@ -53,34 +58,108 @@ const findPlaygroundImageStreamResult = (streamText) => {
       .join('\n');
 
     if (!data) {
-      break;
+      return;
     }
-    try {
-      return JSON.parse(data);
-    } catch (_) {
-      return null;
-    }
-  }
 
-  return null;
+    let parsed;
+    try {
+      parsed = JSON.parse(data);
+    } catch (_) {
+      return;
+    }
+
+    if (eventName === 'job' && parsed?.id) {
+      state.jobId = parsed.id;
+    }
+    if (eventName === 'result') {
+      state.result = parsed;
+      if (parsed?.job_id) {
+        state.jobId = parsed.job_id;
+      }
+    }
+  });
+
+  return state;
 };
 
 const parsePlaygroundImageStreamResult = (streamText) => {
-  const result = findPlaygroundImageStreamResult(streamText);
+  const { result } = parsePlaygroundImageStreamEvents(streamText);
   if (result) {
     return result;
   }
   throw new Error('图片请求连接已结束，但未收到最终响应');
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const fetchPlaygroundImageJobResult = async (jobId) => {
+  const endpoint = `${API_ENDPOINTS.IMAGE_JOBS}/${encodeURIComponent(jobId)}`;
+
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    const response = await fetch(endpoint, {
+      headers: {
+        'New-Api-User': getUserIdFromLocalStorage(),
+      },
+    });
+
+    if (response.status === 202) {
+      await sleep(2000);
+      continue;
+    }
+
+    if (!response.ok) {
+      let errorBody = '';
+      let parsedError = null;
+      try {
+        errorBody = await response.text();
+        const errorJson = JSON.parse(errorBody);
+        if (errorJson?.error) {
+          parsedError = errorJson.error;
+        }
+      } catch (e) {
+        if (!errorBody) {
+          errorBody = '无法读取图片任务响应体';
+        }
+      }
+
+      const err = new Error(
+        parsedError?.message ||
+          `HTTP error! status: ${response.status}, body: ${errorBody}`,
+      );
+      err.errorCode = parsedError?.code || null;
+      throw err;
+    }
+
+    return response.json();
+  }
+
+  throw new Error('图片任务仍未完成，请稍后重试');
+};
+
+const resolvePlaygroundImageStreamResult = async (streamResult) => {
+  if (streamResult?.deferred && streamResult?.job_id) {
+    return fetchPlaygroundImageJobResult(streamResult.job_id);
+  }
+  return streamResult;
+};
+
 const readPlaygroundImageStreamResult = async (response) => {
   if (!response.body?.getReader) {
-    return parsePlaygroundImageStreamResult(await response.text());
+    const streamText = await response.text();
+    const { jobId, result } = parsePlaygroundImageStreamEvents(streamText);
+    if (result) {
+      return resolvePlaygroundImageStreamResult(result);
+    }
+    if (jobId) {
+      return fetchPlaygroundImageJobResult(jobId);
+    }
+    return parsePlaygroundImageStreamResult(streamText);
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let streamText = '';
+  let jobId = null;
 
   try {
     while (true) {
@@ -91,16 +170,23 @@ const readPlaygroundImageStreamResult = async (response) => {
       }
 
       streamText += decoder.decode(value, { stream: true });
-      const result = findPlaygroundImageStreamResult(streamText);
+      const parsed = parsePlaygroundImageStreamEvents(streamText);
+      if (parsed.jobId) {
+        jobId = parsed.jobId;
+      }
+      const result = parsed.result;
       if (result) {
         await reader.cancel().catch(() => {});
-        return result;
+        return resolvePlaygroundImageStreamResult(result);
       }
     }
   } catch (error) {
-    const result = findPlaygroundImageStreamResult(streamText);
-    if (result) {
-      return result;
+    const parsed = parsePlaygroundImageStreamEvents(streamText);
+    if (parsed.result) {
+      return resolvePlaygroundImageStreamResult(parsed.result);
+    }
+    if (parsed.jobId || jobId) {
+      return fetchPlaygroundImageJobResult(parsed.jobId || jobId);
     }
     throw error;
   } finally {
@@ -109,6 +195,13 @@ const readPlaygroundImageStreamResult = async (response) => {
     } catch (_) {}
   }
 
+  const parsed = parsePlaygroundImageStreamEvents(streamText);
+  if (parsed.result) {
+    return resolvePlaygroundImageStreamResult(parsed.result);
+  }
+  if (parsed.jobId || jobId) {
+    return fetchPlaygroundImageJobResult(parsed.jobId || jobId);
+  }
   return parsePlaygroundImageStreamResult(streamText);
 };
 
