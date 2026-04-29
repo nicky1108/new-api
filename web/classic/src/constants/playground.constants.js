@@ -30,6 +30,12 @@ export const MESSAGE_ROLES = {
   SYSTEM: 'system',
 };
 
+export const PLAYGROUND_REQUEST_TYPES = {
+  CHAT: 'chat',
+  IMAGE_GENERATION: 'image_generation',
+  IMAGE_EDIT: 'image_edit',
+};
+
 // 默认消息示例 - 使用函数生成以支持 i18n
 export const getDefaultMessages = (t) => [
   {
@@ -76,6 +82,8 @@ export const DEBUG_TABS = {
 // ========== API 相关常量 ==========
 export const API_ENDPOINTS = {
   CHAT_COMPLETIONS: '/pg/chat/completions',
+  IMAGE_GENERATIONS: '/pg/images/generations',
+  IMAGE_EDITS: '/pg/images/edits',
   USER_MODELS: '/api/user/models',
   USER_GROUPS: '/api/user/self/groups',
 };
@@ -83,6 +91,7 @@ export const API_ENDPOINTS = {
 // ========== 配置默认值 ==========
 export const DEFAULT_CONFIG = {
   inputs: {
+    requestType: PLAYGROUND_REQUEST_TYPES.CHAT,
     model: 'gpt-4o',
     group: '',
     temperature: 0.7,
@@ -94,6 +103,10 @@ export const DEFAULT_CONFIG = {
     stream: true,
     imageEnabled: false,
     imageUrls: [''],
+    imageSize: '1024x1024',
+    imageQuality: '',
+    imageN: 1,
+    imageResponseFormat: '',
   },
   parameterEnabled: {
     temperature: true,

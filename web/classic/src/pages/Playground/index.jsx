@@ -38,6 +38,8 @@ import { useDataLoader } from '../../hooks/playground/useDataLoader';
 import {
   MESSAGE_ROLES,
   ERROR_MESSAGES,
+  API_ENDPOINTS,
+  PLAYGROUND_REQUEST_TYPES,
 } from '../../constants/playground.constants';
 import {
   getLogo,
@@ -47,6 +49,8 @@ import {
   createLoadingAssistantMessage,
   getTextContent,
   buildApiPayload,
+  buildImageGenerationPayload,
+  buildImageEditFormData,
   encodeToBase64,
 } from '../../helpers';
 
@@ -196,6 +200,32 @@ const Playground = () => {
         }
       }
 
+      if (inputs.requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_GENERATION) {
+        const lastUserMessage = [...message]
+          .reverse()
+          .find((msg) => msg.role === MESSAGE_ROLES.USER);
+        return buildImageGenerationPayload(
+          getTextContent(lastUserMessage) || '一张现代产品界面宣传图',
+          inputs,
+        );
+      }
+
+      if (inputs.requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT) {
+        const lastUserMessage = [...message]
+          .reverse()
+          .find((msg) => msg.role === MESSAGE_ROLES.USER);
+        const validImageUrls = (inputs.imageUrls || []).filter(
+          (url) => url.trim() !== '',
+        );
+        return {
+          ...buildImageGenerationPayload(
+            getTextContent(lastUserMessage) || '将图片改成更现代的风格',
+            inputs,
+          ),
+          image: validImageUrls,
+        };
+      }
+
       // 默认预览逻辑
       let messages = [...message];
 
@@ -238,6 +268,7 @@ const Playground = () => {
   // 发送消息
   function onMessageSend(content, attachment) {
     console.log('attachment: ', attachment);
+    const requestType = inputs.requestType || PLAYGROUND_REQUEST_TYPES.CHAT;
 
     // 创建用户消息和加载消息
     const userMessage = createMessage(MESSAGE_ROLES.USER, content);
@@ -265,6 +296,68 @@ const Playground = () => {
         Toast.error(ERROR_MESSAGES.JSON_PARSE_ERROR);
         return;
       }
+    }
+
+    if (requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_GENERATION) {
+      setMessage((prevMessage) => {
+        const newMessages = [...prevMessage, userMessage, loadingMessage];
+        const payload = buildImageGenerationPayload(content, inputs);
+
+        sendRequest(payload, false, {
+          endpoint: API_ENDPOINTS.IMAGE_GENERATIONS,
+          requestType: 'image',
+          debugPayload: payload,
+        });
+
+        setTimeout(() => saveMessagesImmediately(newMessages), 0);
+        return newMessages;
+      });
+      return;
+    }
+
+    if (requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT) {
+      const validImageUrls = (inputs.imageUrls || []).filter(
+        (url) => url.trim() !== '',
+      );
+      if (!inputs.imageEnabled || validImageUrls.length === 0) {
+        Toast.warning(t('请先启用并添加至少一张编辑图片'));
+        return;
+      }
+
+      const messageContent = buildMessageContent(content, validImageUrls, true);
+      const userMessageWithImages = createMessage(
+        MESSAGE_ROLES.USER,
+        messageContent,
+      );
+
+      setMessage((prevMessage) => {
+        const newMessages = [
+          ...prevMessage,
+          userMessageWithImages,
+          loadingMessage,
+        ];
+        const formData = buildImageEditFormData(
+          content,
+          validImageUrls,
+          inputs,
+        );
+        const debugPayload = {
+          ...buildImageGenerationPayload(content, inputs),
+          image: validImageUrls.map((url) =>
+            url.length > 128 ? `${url.slice(0, 128)}...` : url,
+          ),
+        };
+
+        sendRequest(formData, false, {
+          endpoint: API_ENDPOINTS.IMAGE_EDITS,
+          requestType: 'image',
+          debugPayload,
+        });
+
+        setTimeout(() => saveMessagesImmediately(newMessages), 0);
+        return newMessages;
+      });
+      return;
     }
 
     // 默认模式

@@ -20,7 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React from 'react';
 import { Input, Typography, Button, Switch } from '@douyinfe/semi-ui';
 import { IconFile } from '@douyinfe/semi-icons';
-import { FileText, Plus, X, Image } from 'lucide-react';
+import { Plus, X, Image, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const ImageUrlInput = ({
@@ -29,26 +29,71 @@ const ImageUrlInput = ({
   onImageUrlsChange,
   onImageEnabledChange,
   disabled = false,
+  title,
+  description,
 }) => {
   const { t } = useTranslation();
+  const fileInputRef = React.useRef(null);
+  const safeImageUrls = imageUrls || [];
+
   const handleAddImageUrl = () => {
-    const newUrls = [...imageUrls, ''];
+    const newUrls = [...safeImageUrls, ''];
     onImageUrlsChange(newUrls);
   };
 
   const handleUpdateImageUrl = (index, value) => {
-    const newUrls = [...imageUrls];
+    const newUrls = [...safeImageUrls];
     newUrls[index] = value;
     onImageUrlsChange(newUrls);
   };
 
   const handleRemoveImageUrl = (index) => {
-    const newUrls = imageUrls.filter((_, i) => i !== index);
+    const newUrls = safeImageUrls.filter((_, i) => i !== index);
     onImageUrlsChange(newUrls);
+  };
+
+  const handleFileChange = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) {
+      return;
+    }
+
+    Promise.all(
+      files.map(
+        (file) =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (readerEvent) => {
+              resolve(readerEvent.target?.result);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          }),
+      ),
+    ).then((values) => {
+      const newUrls = values.filter((value) => typeof value === 'string');
+      if (newUrls.length > 0) {
+        onImageUrlsChange([
+          ...safeImageUrls.filter((url) => url && url.trim() !== ''),
+          ...newUrls,
+        ]);
+      }
+    });
+
+    event.target.value = '';
   };
 
   return (
     <div className={disabled ? 'opacity-50' : ''}>
+      <input
+        ref={fileInputRef}
+        type='file'
+        accept='image/*'
+        multiple
+        className='hidden'
+        onChange={handleFileChange}
+        disabled={!imageEnabled || disabled}
+      />
       <div className='flex items-center justify-between mb-2'>
         <div className='flex items-center gap-2'>
           <Image
@@ -58,7 +103,7 @@ const ImageUrlInput = ({
             }
           />
           <Typography.Text strong className='text-sm'>
-            {t('图片地址')}
+            {title || t('图片地址')}
           </Typography.Text>
           {disabled && (
             <Typography.Text className='text-xs text-orange-600'>
@@ -85,6 +130,15 @@ const ImageUrlInput = ({
             className='!rounded-full !w-4 !h-4 !p-0 !min-w-0'
             disabled={!imageEnabled || disabled}
           />
+          <Button
+            icon={<Upload size={14} />}
+            size='small'
+            theme='borderless'
+            type='tertiary'
+            onClick={() => fileInputRef.current?.click()}
+            className='!rounded-full !w-6 !h-6 !p-0 !min-w-0'
+            disabled={!imageEnabled || disabled}
+          />
         </div>
       </div>
 
@@ -92,17 +146,17 @@ const ImageUrlInput = ({
         <Typography.Text className='text-xs text-gray-500 mb-2 block'>
           {disabled
             ? t('图片功能在自定义请求体模式下不可用')
-            : t('启用后可添加图片URL进行多模态对话')}
+            : description || t('启用后可添加图片URL进行多模态对话')}
         </Typography.Text>
-      ) : imageUrls.length === 0 ? (
+      ) : safeImageUrls.length === 0 ? (
         <Typography.Text className='text-xs text-gray-500 mb-2 block'>
           {disabled
             ? t('图片功能在自定义请求体模式下不可用')
-            : t('点击 + 按钮添加图片URL进行多模态对话')}
+            : description || t('点击 + 按钮添加图片URL进行多模态对话')}
         </Typography.Text>
       ) : (
         <Typography.Text className='text-xs text-gray-500 mb-2 block'>
-          {t('已添加')} {imageUrls.length} {t('张图片')}
+          {t('已添加')} {safeImageUrls.length} {t('张图片')}
           {disabled ? ` (${t('自定义模式下不可用')})` : ''}
         </Typography.Text>
       )}
@@ -110,7 +164,7 @@ const ImageUrlInput = ({
       <div
         className={`space-y-2 max-h-32 overflow-y-auto image-list-scroll ${!imageEnabled || disabled ? 'opacity-50' : ''}`}
       >
-        {imageUrls.map((url, index) => (
+        {safeImageUrls.map((url, index) => (
           <div key={index} className='flex items-center gap-2'>
             <div className='flex-1'>
               <Input

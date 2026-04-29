@@ -22,6 +22,7 @@ import { Card, Chat, Typography, Button } from '@douyinfe/semi-ui';
 import { MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import CustomInputRender from './CustomInputRender';
+import { PLAYGROUND_REQUEST_TYPES } from '../../constants/playground.constants';
 
 const ChatArea = ({
   chatRef,
@@ -41,6 +42,17 @@ const ChatArea = ({
   renderChatBoxAction,
 }) => {
   const { t } = useTranslation();
+  const requestType = inputs.requestType || PLAYGROUND_REQUEST_TYPES.CHAT;
+  let modeTitle = t('AI 对话');
+  let placeholder = t('请输入您的问题...');
+
+  if (requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_GENERATION) {
+    modeTitle = t('图片生成');
+    placeholder = t('请输入图片生成提示词...');
+  } else if (requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT) {
+    modeTitle = t('图片编辑');
+    placeholder = t('请输入图片编辑指令...');
+  }
 
   const renderInputArea = React.useCallback((props) => {
     return <CustomInputRender {...props} />;
@@ -70,7 +82,7 @@ const ChatArea = ({
               </div>
               <div>
                 <Typography.Title heading={5} className='!text-white mb-0'>
-                  {t('AI 对话')}
+                  {modeTitle}
                 </Typography.Title>
                 <Typography.Text className='!text-white/80 text-sm hidden sm:inline'>
                   {inputs.model || t('选择模型开始对话')}
@@ -119,7 +131,7 @@ const ChatArea = ({
           onStopGenerator={onStopGenerator}
           onClear={onClearMessages}
           className='h-full'
-          placeholder={t('请输入您的问题...')}
+          placeholder={placeholder}
         />
       </div>
     </Card>

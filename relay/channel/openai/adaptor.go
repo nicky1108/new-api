@@ -2,6 +2,7 @@ package openai
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -443,7 +444,11 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 		// 写入所有非文件字段
 		if mf != nil {
 			for key, values := range mf.Value {
-				if key == "model" {
+				if key == "model" ||
+					key == "group" ||
+					key == "image" ||
+					key == "image[]" ||
+					strings.HasPrefix(key, "image[") {
 					continue
 				}
 				for _, value := range values {
@@ -452,10 +457,11 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 			}
 		}
 
-		if mf != nil && mf.File != nil {
+		if mf != nil {
 			// Check if "image" field exists in any form, including array notation
 			var imageFiles []*multipart.FileHeader
 			var exists bool
+			imageValues := collectImageValueInputs(mf.Value)
 
 			// First check for standard "image" field
 			if imageFiles, exists = mf.File["image"]; !exists || len(imageFiles) == 0 {
@@ -471,7 +477,7 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 					}
 
 					// If no image fields found at all
-					if !foundArrayImages && (len(imageFiles) == 0) {
+					if !foundArrayImages && len(imageFiles) == 0 && len(imageValues) == 0 {
 						return nil, errors.New("image is required")
 					}
 				}
@@ -509,6 +515,20 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 
 				// 复制完立即关闭，避免在循环内使用 defer 占用资源
 				_ = file.Close()
+			}
+
+			for i, imageValue := range imageValues {
+				fieldName := "image"
+				if len(imageFiles)+len(imageValues) > 1 {
+					fieldName = "image[]"
+				}
+				if err := writeImageValuePart(writer, fieldName, imageValue, i); err != nil {
+					return nil, err
+				}
+			}
+
+			if len(imageFiles) == 0 && len(imageValues) == 0 {
+				return nil, errors.New("image is required")
 			}
 
 			// Handle mask file if present
@@ -549,6 +569,83 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 	default:
 		return request, nil
 	}
+}
+
+func collectImageValueInputs(values map[string][]string) []string {
+	if values == nil {
+		return nil
+	}
+
+	var imageValues []string
+	for key, list := range values {
+		if key != "image" && key != "image[]" && !strings.HasPrefix(key, "image[") {
+			continue
+		}
+		for _, value := range list {
+			value = strings.TrimSpace(value)
+			if value != "" {
+				imageValues = append(imageValues, value)
+			}
+		}
+	}
+	return imageValues
+}
+
+func writeImageValuePart(
+	writer *multipart.Writer,
+	fieldName string,
+	imageValue string,
+	index int,
+) error {
+	mimeType := ""
+	base64Data := ""
+	var err error
+
+	if strings.HasPrefix(imageValue, "http://") || strings.HasPrefix(imageValue, "https://") {
+		mimeType, base64Data, err = service.GetImageFromUrl(imageValue)
+		if err != nil {
+			return fmt.Errorf("failed to download image %d: %w", index+1, err)
+		}
+	} else {
+		mimeType, base64Data, err = service.DecodeBase64FileData(imageValue)
+		if err != nil {
+			return fmt.Errorf("failed to decode image %d: %w", index+1, err)
+		}
+	}
+
+	if mimeType == "" {
+		mimeType = "image/png"
+	}
+
+	imageBytes, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return fmt.Errorf("failed to decode image %d base64 bytes: %w", index+1, err)
+	}
+
+	extension := strings.TrimPrefix(strings.TrimPrefix(mimeType, "image/"), "x-")
+	if extension == "" || strings.Contains(extension, "/") {
+		extension = "png"
+	}
+	if extension == "jpeg" {
+		extension = "jpg"
+	}
+
+	h := make(textproto.MIMEHeader)
+	h.Set(
+		"Content-Disposition",
+		fmt.Sprintf(`form-data; name="%s"; filename="image-%d.%s"`, fieldName, index+1, extension),
+	)
+	h.Set("Content-Type", mimeType)
+
+	part, err := writer.CreatePart(h)
+	if err != nil {
+		return fmt.Errorf("create form part failed for image %d: %w", index+1, err)
+	}
+
+	if _, err := part.Write(imageBytes); err != nil {
+		return fmt.Errorf("write form part failed for image %d: %w", index+1, err)
+	}
+	return nil
 }
 
 // detectImageMimeType determines the MIME type based on the file extension

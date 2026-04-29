@@ -64,10 +64,14 @@ export const usePlaygroundState = () => {
 
   // 基础配置状态
   const [inputs, setInputs] = useState(
-    savedConfig.inputs || DEFAULT_CONFIG.inputs,
+    savedConfig.inputs
+      ? { ...DEFAULT_CONFIG.inputs, ...savedConfig.inputs }
+      : DEFAULT_CONFIG.inputs,
   );
   const [parameterEnabled, setParameterEnabled] = useState(
-    savedConfig.parameterEnabled || DEFAULT_CONFIG.parameterEnabled,
+    savedConfig.parameterEnabled
+      ? { ...DEFAULT_CONFIG.parameterEnabled, ...savedConfig.parameterEnabled }
+      : DEFAULT_CONFIG.parameterEnabled,
   );
   const [showDebugPanel, setShowDebugPanel] = useState(
     savedConfig.showDebugPanel || DEFAULT_CONFIG.showDebugPanel,

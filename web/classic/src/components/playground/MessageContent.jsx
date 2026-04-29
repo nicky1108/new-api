@@ -23,7 +23,7 @@ import MarkdownRenderer from '../common/markdown/MarkdownRenderer';
 import ThinkingContent from './ThinkingContent';
 import { Loader2, Check, X, Settings, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { isAdmin } from '../../helpers/utils';
+import { getImageUrlFromContentItem, isAdmin } from '../../helpers/utils';
 
 const MessageContent = ({
   message,
@@ -77,7 +77,10 @@ const MessageContent = ({
           >
             <div className='flex items-center gap-2'>
               <AlertTriangle size={16} className='text-orange-500 shrink-0' />
-              <Typography.Text strong className='!text-[var(--semi-color-text-0)]'>
+              <Typography.Text
+                strong
+                className='!text-[var(--semi-color-text-0)]'
+              >
                 {t('模型价格未配置')}
               </Typography.Text>
             </div>
@@ -93,7 +96,9 @@ const MessageContent = ({
                 theme='light'
                 type='warning'
                 icon={<Settings size={14} />}
-                onClick={() => window.open('/console/setting?tab=ratio', '_blank')}
+                onClick={() =>
+                  window.open('/console/setting?tab=ratio', '_blank')
+                }
               >
                 {t('前往设置')}
               </Button>
@@ -306,27 +311,37 @@ const MessageContent = ({
             return (
               <div>
                 {imageContents.length > 0 && (
-                  <div className='mb-3 space-y-2'>
-                    {imageContents.map((imgItem, index) => (
-                      <div key={index} className='max-w-sm'>
-                        <img
-                          src={imgItem.image_url.url}
-                          alt={`用户上传的图片 ${index + 1}`}
-                          className='rounded-lg max-w-full h-auto shadow-sm border'
-                          style={{ maxHeight: '300px' }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
-                        <div
-                          className='text-red-500 text-sm p-2 bg-red-50 rounded-lg border border-red-200'
-                          style={{ display: 'none' }}
-                        >
-                          图片加载失败: {imgItem.image_url.url}
+                  <div className='mb-3 grid gap-3 sm:grid-cols-2'>
+                    {imageContents.map((imgItem, index) => {
+                      const imageUrl = getImageUrlFromContentItem(imgItem);
+                      if (!imageUrl) {
+                        return null;
+                      }
+                      const imageAltPrefix =
+                        message.role === 'assistant'
+                          ? t('模型返回的图片')
+                          : t('用户上传的图片');
+                      return (
+                        <div key={index} className='max-w-sm'>
+                          <img
+                            src={imageUrl}
+                            alt={`${imageAltPrefix} ${index + 1}`}
+                            className='rounded-lg max-w-full h-auto shadow-sm border'
+                            style={{ maxHeight: '360px' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'block';
+                            }}
+                          />
+                          <div
+                            className='text-red-500 text-sm p-2 bg-red-50 rounded-lg border border-red-200'
+                            style={{ display: 'none' }}
+                          >
+                            图片加载失败: {imageUrl}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

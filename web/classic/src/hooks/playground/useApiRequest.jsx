@@ -30,6 +30,8 @@ import {
   handleApiError,
   processThinkTags,
   processIncompleteThinkTags,
+  buildImageResponseContent,
+  normalizeAssistantContent,
 } from '../../helpers';
 
 export const useApiRequest = (
@@ -241,13 +243,18 @@ export const useApiRequest = (
 
         if (data.choices?.[0]) {
           const choice = data.choices[0];
-          let content = choice.message?.content || '';
+          const rawContent = choice.message?.content || '';
           let reasoningContent =
             choice.message?.reasoning_content ||
             choice.message?.reasoning ||
             '';
 
-          const processed = processThinkTags(content, reasoningContent);
+          const processed = Array.isArray(rawContent)
+            ? {
+                content: normalizeAssistantContent(rawContent),
+                reasoningContent,
+              }
+            : processThinkTags(rawContent, reasoningContent);
 
           setMessage((prevMessage) => {
             const newMessages = [...prevMessage];
@@ -298,6 +305,118 @@ export const useApiRequest = (
       }
     },
     [setDebugData, setActiveDebugTab, setMessage, t, applyAutoCollapseLogic],
+  );
+
+  const handleImageRequest = useCallback(
+    async (endpoint, payload, debugPayload) => {
+      const isFormData = payload instanceof FormData;
+      setDebugData((prev) => ({
+        ...prev,
+        request: debugPayload || payload,
+        timestamp: new Date().toISOString(),
+        response: null,
+        sseMessages: null,
+        isStreaming: false,
+      }));
+      setActiveDebugTab(DEBUG_TABS.REQUEST);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+            'New-Api-User': getUserIdFromLocalStorage(),
+          },
+          body: isFormData ? payload : JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          let errorBody = '';
+          let parsedError = null;
+          try {
+            errorBody = await response.text();
+            const errorJson = JSON.parse(errorBody);
+            if (errorJson?.error) {
+              parsedError = errorJson.error;
+            }
+          } catch (e) {
+            if (!errorBody) {
+              errorBody = '无法读取错误响应体';
+            }
+          }
+
+          const err = new Error(
+            parsedError?.message ||
+              `HTTP error! status: ${response.status}, body: ${errorBody}`,
+          );
+          err.errorCode = parsedError?.code || null;
+          throw err;
+        }
+
+        const data = await response.json();
+        setDebugData((prev) => ({
+          ...prev,
+          response: JSON.stringify(data, null, 2),
+        }));
+        setActiveDebugTab(DEBUG_TABS.RESPONSE);
+
+        const imageContent = buildImageResponseContent(data);
+        setMessage((prevMessage) => {
+          const newMessages = [...prevMessage];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage?.status === MESSAGE_STATUS.LOADING) {
+            const autoCollapseState = applyAutoCollapseLogic(lastMessage, true);
+
+            newMessages[newMessages.length - 1] = {
+              ...lastMessage,
+              content:
+                imageContent.length > 0
+                  ? imageContent
+                  : t('图片接口未返回可渲染的图片'),
+              status: MESSAGE_STATUS.COMPLETE,
+              ...autoCollapseState,
+            };
+          }
+          setTimeout(() => saveMessages(newMessages), 0);
+          return newMessages;
+        });
+      } catch (error) {
+        console.error('Image request error:', error);
+
+        const errorInfo = handleApiError(error);
+        setDebugData((prev) => ({
+          ...prev,
+          response: JSON.stringify(errorInfo, null, 2),
+        }));
+        setActiveDebugTab(DEBUG_TABS.RESPONSE);
+
+        setMessage((prevMessage) => {
+          const newMessages = [...prevMessage];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage?.status === MESSAGE_STATUS.LOADING) {
+            const autoCollapseState = applyAutoCollapseLogic(lastMessage, true);
+
+            newMessages[newMessages.length - 1] = {
+              ...lastMessage,
+              content: t('请求发生错误: ') + error.message,
+              errorCode: error.errorCode || null,
+              status: MESSAGE_STATUS.ERROR,
+              ...autoCollapseState,
+            };
+          }
+          setTimeout(() => saveMessages(newMessages), 0);
+          return newMessages;
+        });
+      }
+    },
+    [
+      setDebugData,
+      setActiveDebugTab,
+      setMessage,
+      t,
+      applyAutoCollapseLogic,
+      saveMessages,
+    ],
   );
 
   // SSE请求
@@ -421,7 +540,11 @@ export const useApiRequest = (
           setMessage((prevMessage) => {
             const newMessages = [...prevMessage];
             const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage && lastMessage.status !== MESSAGE_STATUS.COMPLETE && lastMessage.status !== MESSAGE_STATUS.ERROR) {
+            if (
+              lastMessage &&
+              lastMessage.status !== MESSAGE_STATUS.COMPLETE &&
+              lastMessage.status !== MESSAGE_STATUS.ERROR
+            ) {
               newMessages[newMessages.length - 1] = {
                 ...lastMessage,
                 content: (lastMessage.content || '') + errorMessage,
@@ -536,14 +659,23 @@ export const useApiRequest = (
 
   // 发送请求
   const sendRequest = useCallback(
-    (payload, isStream) => {
+    (payload, isStream, options = {}) => {
+      if (options.requestType === 'image') {
+        handleImageRequest(
+          options.endpoint || API_ENDPOINTS.IMAGE_GENERATIONS,
+          payload,
+          options.debugPayload,
+        );
+        return;
+      }
+
       if (isStream) {
         handleSSE(payload);
       } else {
         handleNonStreamRequest(payload);
       }
     },
-    [handleSSE, handleNonStreamRequest],
+    [handleSSE, handleNonStreamRequest, handleImageRequest],
   );
 
   return {
