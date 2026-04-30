@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/new-api}"
 PORT="${NEW_API_PORT:-3000}"
-CLIENT_IMAGE="${POSTGRES_CLIENT_IMAGE:-postgres:16-alpine}"
+TARGET_CLIENT_IMAGE="${POSTGRES_TARGET_CLIENT_IMAGE:-postgres:18-alpine}"
 
 if [ "${1:-}" = "--dsn-from-stdin" ]; then
   IFS= read -r RDS_SQL_DSN
@@ -80,7 +80,7 @@ docker compose exec -T postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 docker run --rm \
   -e ADMIN_DSN="$admin_dsn" \
   -e TARGET_DB="$target_db" \
-  "$CLIENT_IMAGE" \
+  "$TARGET_CLIENT_IMAGE" \
   sh -eu -c '
     exists="$(psql "$ADMIN_DSN" -At -v ON_ERROR_STOP=1 -c "SELECT 1 FROM pg_database WHERE datname = '\''$TARGET_DB'\'';")"
     if [ "$exists" != "1" ]; then
@@ -90,14 +90,14 @@ docker run --rm \
 
 docker run --rm \
   -e RDS_SQL_DSN="$RDS_SQL_DSN" \
-  "$CLIENT_IMAGE" \
+  "$TARGET_CLIENT_IMAGE" \
   psql "$RDS_SQL_DSN" -v ON_ERROR_STOP=1 -c "select 1" >/dev/null
 
 echo "Backing up the current target RDS database before replacement."
 docker run --rm \
   -e RDS_SQL_DSN="$RDS_SQL_DSN" \
   -v "$backup_dir:/backup" \
-  "$CLIENT_IMAGE" \
+  "$TARGET_CLIENT_IMAGE" \
   pg_dump --format=custom --no-owner --no-privileges --file=/backup/target-before-rds.dump "$RDS_SQL_DSN"
 
 echo "Stopping application writes for the final consistent source dump."
@@ -128,7 +128,7 @@ echo "Replacing RDS public schema with the final source dump."
 docker run --rm \
   -e RDS_SQL_DSN="$RDS_SQL_DSN" \
   -v "$backup_dir:/backup" \
-  "$CLIENT_IMAGE" \
+  "$TARGET_CLIENT_IMAGE" \
   sh -eu -c '
     psql "$RDS_SQL_DSN" -v ON_ERROR_STOP=1 -c "DROP SCHEMA IF EXISTS public CASCADE;"
     psql "$RDS_SQL_DSN" -v ON_ERROR_STOP=1 -c "CREATE SCHEMA public;"
@@ -139,7 +139,7 @@ echo "Writing exact target table counts."
 docker run --rm \
   -i \
   -e RDS_SQL_DSN="$RDS_SQL_DSN" \
-  "$CLIENT_IMAGE" \
+  "$TARGET_CLIENT_IMAGE" \
   psql "$RDS_SQL_DSN" -At -F $'\t' <<'SQL' \
   | awk -F '\t' '$1 ~ /^public[.]/ { print }' > "$backup_dir/target-counts.tsv"
 SELECT format('SELECT %L, count(*) FROM %I.%I;', schemaname || '.' || tablename, schemaname, tablename)
