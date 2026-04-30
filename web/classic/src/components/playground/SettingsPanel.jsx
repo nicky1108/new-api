@@ -141,6 +141,18 @@ const SettingsPanel = ({
     customRequestMode,
     customRequestBody,
   };
+  const requestTypeGroupStyle = {
+    display: 'grid',
+    gridTemplateColumns: styleState.isMobile
+      ? 'repeat(2, minmax(0, 1fr))'
+      : 'repeat(5, minmax(0, 1fr))',
+    gap: 6,
+  };
+  const requestTypeRadioStyle = {
+    width: '100%',
+    minWidth: 0,
+    marginRight: 0,
+  };
 
   const hasModelOption = (modelName) =>
     (models || []).some(
@@ -327,20 +339,47 @@ const SettingsPanel = ({
             onChange={(event) => handleRequestTypeChange(event.target.value)}
             disabled={customRequestMode}
             className='w-full'
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+            style={requestTypeGroupStyle}
           >
-            <Radio value={PLAYGROUND_REQUEST_TYPES.CHAT}>{t('对话')}</Radio>
-            <Radio value={PLAYGROUND_REQUEST_TYPES.IMAGE_GENERATION}>
-              {t('图片生成')}
+            <Radio
+              value={PLAYGROUND_REQUEST_TYPES.CHAT}
+              style={requestTypeRadioStyle}
+            >
+              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+                {t('对话')}
+              </span>
             </Radio>
-            <Radio value={PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT}>
-              {t('图片编辑')}
+            <Radio
+              value={PLAYGROUND_REQUEST_TYPES.IMAGE_GENERATION}
+              style={requestTypeRadioStyle}
+            >
+              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+                {t('图片生成')}
+              </span>
             </Radio>
-            <Radio value={PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS}>
-              {t('语音合成')}
+            <Radio
+              value={PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT}
+              style={requestTypeRadioStyle}
+            >
+              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+                {t('图片编辑')}
+              </span>
             </Radio>
-            <Radio value={PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION}>
-              {t('音乐生成')}
+            <Radio
+              value={PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS}
+              style={requestTypeRadioStyle}
+            >
+              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+                {t('语音合成')}
+              </span>
+            </Radio>
+            <Radio
+              value={PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION}
+              style={requestTypeRadioStyle}
+            >
+              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+                {t('音乐生成')}
+              </span>
             </Radio>
           </RadioGroup>
         </div>
