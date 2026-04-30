@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/QuantumNous/new-api/relay/helper"
@@ -36,10 +38,15 @@ func MiniMaxMusicHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIErro
 	if err := helper.ModelMappedHelper(c, info, request); err != nil {
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
-	if publicModel, ok := publicPlaygroundMiniMaxMusicModel(request.Model); ok {
+	if !isMiniMaxTokenPlanMusicChannel(c) {
+		if publicModel, ok := publicPlaygroundMiniMaxMusicModel(request.Model); ok {
+			c.Set("minimax_music_original_model", request.Model)
+			c.Set("minimax_music_normalized_model", publicModel)
+			request.Model = publicModel
+		}
+	} else {
 		c.Set("minimax_music_original_model", request.Model)
-		c.Set("minimax_music_normalized_model", publicModel)
-		request.Model = publicModel
+		c.Set("minimax_music_token_plan_model", request.Model)
 	}
 
 	adaptor := GetAdaptor(info.ApiType)
@@ -129,9 +136,19 @@ func publicPlaygroundMiniMaxMusicModel(model string) (string, bool) {
 }
 
 func shouldFallbackMiniMaxMusicModel(c *gin.Context, model string) bool {
+	if isMiniMaxTokenPlanMusicChannel(c) {
+		return false
+	}
 	if c.GetInt("minimax_music_status_code") != 2013 {
 		return false
 	}
 	_, ok := fallbackPlaygroundMiniMaxMusicModel(model)
 	return ok
+}
+
+func isMiniMaxTokenPlanMusicChannel(c *gin.Context) bool {
+	channelName := strings.ToLower(strings.TrimSpace(common.GetContextKeyString(c, constant.ContextKeyChannelName)))
+	return strings.Contains(channelName, "minimaxcn") ||
+		strings.Contains(channelName, "tokenplan") ||
+		strings.Contains(channelName, "token plan")
 }

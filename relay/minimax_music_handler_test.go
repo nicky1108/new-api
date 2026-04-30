@@ -1,6 +1,14 @@
 package relay
 
-import "testing"
+import (
+	"net/http/httptest"
+	"testing"
+
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
+
+	"github.com/gin-gonic/gin"
+)
 
 func TestPublicPlaygroundMiniMaxMusicModel(t *testing.T) {
 	t.Parallel()
@@ -41,5 +49,22 @@ func TestPublicPlaygroundMiniMaxMusicModel(t *testing.T) {
 				t.Fatalf("publicPlaygroundMiniMaxMusicModel(%q) = %q, %v; want %q, %v", tt.model, gotModel, gotOK, tt.wantModel, tt.wantOK)
 			}
 		})
+	}
+}
+
+func TestMiniMaxTokenPlanMusicChannelSkipsFallback(t *testing.T) {
+	t.Parallel()
+
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	common.SetContextKey(c, constant.ContextKeyChannelName, "minimaxcn-tokenplan")
+	c.Set("minimax_music_status_code", 2013)
+
+	if !isMiniMaxTokenPlanMusicChannel(c) {
+		t.Fatal("isMiniMaxTokenPlanMusicChannel() = false, want true")
+	}
+	if shouldFallbackMiniMaxMusicModel(c, "music-2.6") {
+		t.Fatal("shouldFallbackMiniMaxMusicModel() = true for token plan channel, want false")
 	}
 }
