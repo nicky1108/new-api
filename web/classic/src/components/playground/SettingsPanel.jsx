@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Card,
   Select,
@@ -28,6 +28,7 @@ import {
   Radio,
   Input,
   InputNumber,
+  Toast,
 } from '@douyinfe/semi-ui';
 import {
   Sparkles,
@@ -39,14 +40,22 @@ import {
   Wand2,
   Volume2,
   Music,
+  RefreshCw,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { renderGroupOption, selectFilter } from '../../helpers';
+import {
+  getUserIdFromLocalStorage,
+  renderGroupOption,
+  selectFilter,
+} from '../../helpers';
 import ParameterControl from './ParameterControl';
 import ImageUrlInput from './ImageUrlInput';
 import ConfigManager from './ConfigManager';
 import CustomRequestEditor from './CustomRequestEditor';
-import { PLAYGROUND_REQUEST_TYPES } from '../../constants/playground.constants';
+import {
+  API_ENDPOINTS,
+  PLAYGROUND_REQUEST_TYPES,
+} from '../../constants/playground.constants';
 
 const IMAGE_QUALITY_OPTIONS = [
   { label: 'auto', value: '' },
@@ -80,6 +89,18 @@ const SPEECH_EMOTION_OPTIONS = [
   { label: 'neutral', value: 'neutral' },
 ];
 
+const normalizeSpeechVoiceOptions = (voices = []) =>
+  voices
+    .filter((voice) => voice?.voice_id)
+    .map((voice) => {
+      const label = voice.label || voice.voice_name || voice.voice_id;
+      const category = voice.category_name || voice.category || '';
+      return {
+        label: category ? `${label} · ${category}` : label,
+        value: voice.voice_id,
+      };
+    });
+
 const SettingsPanel = ({
   inputs,
   parameterEnabled,
@@ -109,6 +130,9 @@ const SettingsPanel = ({
     requestType === PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS;
   const isMusicGenerationMode =
     requestType === PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION;
+  const [speechVoiceOptions, setSpeechVoiceOptions] = useState([]);
+  const [speechVoiceLoading, setSpeechVoiceLoading] = useState(false);
+  const [speechVoiceLoadError, setSpeechVoiceLoadError] = useState('');
 
   const currentConfig = {
     inputs,
@@ -125,6 +149,73 @@ const SettingsPanel = ({
 
   const pickAvailableModel = (candidates) =>
     candidates.find((modelName) => hasModelOption(modelName));
+
+  const fetchSpeechVoices = useCallback(
+    async ({ silent = false, signal } = {}) => {
+      if (!isSpeechSynthesisMode || customRequestMode || !inputs.model) {
+        setSpeechVoiceOptions([]);
+        setSpeechVoiceLoadError('');
+        setSpeechVoiceLoading(false);
+        return;
+      }
+
+      setSpeechVoiceLoading(true);
+      setSpeechVoiceLoadError('');
+
+      try {
+        const response = await fetch(API_ENDPOINTS.AUDIO_VOICES, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'New-Api-User': getUserIdFromLocalStorage(),
+          },
+          body: JSON.stringify({
+            model: inputs.model,
+            group: inputs.group,
+            voice_type: 'all',
+          }),
+          signal,
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data?.error?.message || t('音色列表加载失败'));
+        }
+
+        setSpeechVoiceOptions(normalizeSpeechVoiceOptions(data?.voices));
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          return;
+        }
+        const message = error?.message || t('音色列表加载失败');
+        setSpeechVoiceOptions([]);
+        setSpeechVoiceLoadError(message);
+        if (!silent) {
+          Toast.error({ content: message });
+        }
+      } finally {
+        if (!signal?.aborted) {
+          setSpeechVoiceLoading(false);
+        }
+      }
+    },
+    [
+      customRequestMode,
+      inputs.group,
+      inputs.model,
+      isSpeechSynthesisMode,
+      t,
+    ],
+  );
+
+  useEffect(() => {
+    if (!isSpeechSynthesisMode) {
+      return undefined;
+    }
+    const controller = new AbortController();
+    fetchSpeechVoices({ silent: true, signal: controller.signal });
+    return () => controller.abort();
+  }, [fetchSpeechVoices, isSpeechSynthesisMode]);
 
   const handleRequestTypeChange = (value) => {
     onInputChange('requestType', value);
@@ -145,8 +236,16 @@ const SettingsPanel = ({
     }
 
     if (value === PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION) {
-      if (inputs.model !== 'music-2.5' && hasModelOption('music-2.5')) {
-        onInputChange('model', 'music-2.5');
+      if (!inputs.model?.startsWith('music-')) {
+        const musicModel = pickAvailableModel([
+          'music-2.6',
+          'music-2.6-free',
+          'music-cover',
+          'music-cover-free',
+        ]);
+        if (musicModel) {
+          onInputChange('model', musicModel);
+        }
       }
     }
   };
@@ -418,16 +517,49 @@ const SettingsPanel = ({
             </div>
             <div className='space-y-3'>
               <div>
-                <Typography.Text className='text-xs text-gray-500 mb-1 block'>
-                  {t('音色 ID')}
-                </Typography.Text>
-                <Input
-                  value={inputs.speechVoice}
+                <div className='flex items-center justify-between mb-1'>
+                  <Typography.Text className='text-xs text-gray-500 block'>
+                    {t('音色 ID')}
+                  </Typography.Text>
+                  <Button
+                    icon={<RefreshCw size={14} />}
+                    theme='borderless'
+                    type='tertiary'
+                    size='small'
+                    onClick={() => fetchSpeechVoices({ silent: false })}
+                    disabled={customRequestMode || speechVoiceLoading}
+                    loading={speechVoiceLoading}
+                    aria-label={t('刷新音色')}
+                  />
+                </div>
+                <Select
+                  value={inputs.speechVoice || undefined}
+                  optionList={speechVoiceOptions}
                   onChange={(value) => onInputChange('speechVoice', value)}
-                  placeholder='male-qn-qingse'
+                  placeholder={
+                    speechVoiceLoading
+                      ? t('正在加载音色')
+                      : t('请选择或输入音色 ID')
+                  }
+                  filter={selectFilter}
+                  allowCreate
+                  autoClearSearchValue={false}
+                  loading={speechVoiceLoading}
                   disabled={customRequestMode}
+                  emptyContent={
+                    speechVoiceLoadError
+                      ? t('加载失败，可直接输入音色 ID')
+                      : t('暂无音色')
+                  }
+                  style={{ width: '100%' }}
+                  dropdownStyle={{ width: '100%', maxWidth: '100%' }}
                   className='!rounded-lg'
                 />
+                {speechVoiceLoadError && (
+                  <Typography.Text className='text-xs text-red-500 mt-1 block'>
+                    {speechVoiceLoadError}
+                  </Typography.Text>
+                )}
               </div>
               <div className='grid grid-cols-2 gap-3'>
                 <div>

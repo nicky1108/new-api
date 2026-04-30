@@ -52,7 +52,28 @@ func TestGetRequestURLForMusicGeneration(t *testing.T) {
 		t.Fatalf("GetRequestURL returned error: %v", err)
 	}
 
-	want := "https://api.minimax.chat/v1/music_generation"
+	want := "https://api.minimaxi.com/v1/music_generation"
+	if got != want {
+		t.Fatalf("GetRequestURL() = %q, want %q", got, want)
+	}
+}
+
+func TestGetRequestURLForMusicGenerationRespectsCustomBaseURL(t *testing.T) {
+	t.Parallel()
+
+	info := &relaycommon.RelayInfo{
+		RelayMode: relayconstant.RelayModeMiniMaxMusic,
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ChannelBaseUrl: "https://api-bj.minimaxi.com/",
+		},
+	}
+
+	got, err := GetRequestURL(info)
+	if err != nil {
+		t.Fatalf("GetRequestURL returned error: %v", err)
+	}
+
+	want := "https://api-bj.minimaxi.com/v1/music_generation"
 	if got != want {
 		t.Fatalf("GetRequestURL() = %q, want %q", got, want)
 	}
@@ -64,10 +85,10 @@ func TestConvertMiniMaxMusicRequestDefaults(t *testing.T) {
 	adaptor := &Adaptor{}
 	info := &relaycommon.RelayInfo{
 		RelayMode:       relayconstant.RelayModeMiniMaxMusic,
-		OriginModelName: "music-2.5",
+		OriginModelName: "music-2.6",
 	}
 	request := dto.MiniMaxMusicRequest{
-		Model:  "music-2.5",
+		Model:  "music-2.6",
 		Prompt: "独立民谣, 忧郁",
 		Lyrics: "[verse]\n晚风吹过旧街口",
 	}
@@ -87,8 +108,8 @@ func TestConvertMiniMaxMusicRequestDefaults(t *testing.T) {
 		t.Fatalf("json.Unmarshal returned error: %v", err)
 	}
 
-	if payload["model"] != "music-2.5" {
-		t.Fatalf("model = %#v, want %q", payload["model"], "music-2.5")
+	if payload["model"] != "music-2.6" {
+		t.Fatalf("model = %#v, want %q", payload["model"], "music-2.6")
 	}
 	if payload["output_format"] != "hex" {
 		t.Fatalf("output_format = %#v, want hex", payload["output_format"])

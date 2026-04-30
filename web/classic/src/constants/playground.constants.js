@@ -90,6 +90,7 @@ export const API_ENDPOINTS = {
   IMAGE_EDITS_STREAM: '/pg/images/edits/stream',
   IMAGE_JOBS: '/pg/images/jobs',
   AUDIO_SPEECH: '/pg/audio/speech',
+  AUDIO_VOICES: '/pg/audio/voices',
   MUSIC_GENERATIONS: '/pg/music/generations',
   USER_MODELS: '/api/user/models',
   USER_GROUPS: '/api/user/self/groups',

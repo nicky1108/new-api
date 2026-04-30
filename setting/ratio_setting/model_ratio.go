@@ -289,7 +289,10 @@ var defaultModelRatio = map[string]float64{
 var defaultModelPrice = map[string]float64{
 	"suno_music":                     0.1,
 	"suno_lyrics":                    0.01,
-	"music-2.5":                      0.1,
+	"music-2.6":                      0.1,
+	"music-2.6-free":                 0.1,
+	"music-cover":                    0.1,
+	"music-cover-free":               0.1,
 	"dall-e-3":                       0.04,
 	"imagen-3.0-generate-002":        0.03,
 	"black-forest-labs/flux-1.1-pro": 0.04,

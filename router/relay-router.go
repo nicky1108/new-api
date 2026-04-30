@@ -74,6 +74,7 @@ func SetRelayRouter(router *gin.Engine) {
 		playgroundRelayRouter.POST("/images/edits", controller.PlaygroundImage)
 		playgroundRelayRouter.POST("/images/edits/stream", controller.PlaygroundImageStream)
 		playgroundRelayRouter.POST("/audio/speech", controller.PlaygroundAudio)
+		playgroundRelayRouter.POST("/audio/voices", controller.PlaygroundAudioVoices)
 		playgroundRelayRouter.POST("/music/generations", controller.PlaygroundMusic)
 	}
 	relayV1Router := router.Group("/v1")
