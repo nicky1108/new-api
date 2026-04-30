@@ -17,7 +17,7 @@ install -d -m 0755 /var/www/openhubs/docs/user-guide
 install -m 0644 docs/user-guide/index.html /var/www/openhubs/docs/user-guide/index.html
 
 docker compose pull
-docker compose up -d --remove-orphans
+docker compose up -d --remove-orphans redis new-api
 
 for attempt in $(seq 1 60); do
   if curl -fsS "http://127.0.0.1:${PORT}/api/status" | grep -q '"success"[[:space:]]*:[[:space:]]*true'; then
@@ -33,6 +33,11 @@ for attempt in $(seq 1 60); do
   sleep 2
 done
 
+APP_SQL_DSN="$(awk -F= '$1 == "SQL_DSN" { sub(/^[^=]*=/, ""); print; exit }' .env || true)"
+if [ -n "$APP_SQL_DSN" ] && ! printf '%s' "$APP_SQL_DSN" | grep -q '@postgres:5432/'; then
+  docker compose stop postgres || true
+fi
+
 if [ -L "$LEGACY_SITE" ] && grep -q "server_name ${DOMAIN}" "$LEGACY_SITE"; then
   LEGACY_TARGET="$(readlink -f "$LEGACY_SITE")"
   cp -a "$LEGACY_TARGET" "${LEGACY_TARGET}.disabled-$(date +%Y%m%d%H%M%S)"
@@ -43,4 +48,4 @@ install -m 0644 "nginx-${DOMAIN}.conf" "$NGINX_CONF"
 nginx -t
 systemctl reload nginx
 
-docker compose ps
+docker compose ps -a
