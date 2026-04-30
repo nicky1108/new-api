@@ -621,6 +621,10 @@ html.dark .sbg-variant-green {
   width: 100%;
 }
 
+.playground-request-type-radio .semi-radio-addon-buttonRadio-small {
+  padding: 2px 0px;
+}
+
 /* ==================== 同步倍率 - 渠道选择器 ==================== */
 
 .components-transfer-source-item,
