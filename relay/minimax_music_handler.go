@@ -36,6 +36,11 @@ func MiniMaxMusicHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIErro
 	if err := helper.ModelMappedHelper(c, info, request); err != nil {
 		return types.NewError(err, types.ErrorCodeChannelModelMappedError, types.ErrOptionWithSkipRetry())
 	}
+	if publicModel, ok := publicPlaygroundMiniMaxMusicModel(request.Model); ok {
+		c.Set("minimax_music_original_model", request.Model)
+		c.Set("minimax_music_normalized_model", publicModel)
+		request.Model = publicModel
+	}
 
 	adaptor := GetAdaptor(info.ApiType)
 	if adaptor == nil {
@@ -69,8 +74,12 @@ func MiniMaxMusicHelper(c *gin.Context, info *relaycommon.RelayInfo) (newAPIErro
 	}
 
 	usage, newAPIError := adaptor.DoResponse(c, httpResp, info)
-	if newAPIError != nil && shouldFallbackMiniMaxMusicModel(c, request.Model) {
-		fallbackModel, _ := fallbackPlaygroundMiniMaxMusicModel(request.Model)
+	attemptedModel := c.GetString("minimax_music_request_model")
+	if attemptedModel == "" {
+		attemptedModel = request.Model
+	}
+	if newAPIError != nil && shouldFallbackMiniMaxMusicModel(c, attemptedModel) {
+		fallbackModel, _ := fallbackPlaygroundMiniMaxMusicModel(attemptedModel)
 		request.Model = fallbackModel
 		c.Set("minimax_music_fallback_model", fallbackModel)
 
@@ -110,6 +119,13 @@ func fallbackPlaygroundMiniMaxMusicModel(model string) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+func publicPlaygroundMiniMaxMusicModel(model string) (string, bool) {
+	if fallbackModel, ok := fallbackPlaygroundMiniMaxMusicModel(model); ok {
+		return fallbackModel, true
+	}
+	return model, false
 }
 
 func shouldFallbackMiniMaxMusicModel(c *gin.Context, model string) bool {

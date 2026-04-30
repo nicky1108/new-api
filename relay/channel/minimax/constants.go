@@ -28,9 +28,9 @@ var ModelList = []string{
 	"image-01",
 	"image-01-live",
 	"music-2.6-free",
+	"music-cover-free",
 	"music-2.6",
 	"music-cover",
-	"music-cover-free",
 }
 
 var ChannelName = "minimax"

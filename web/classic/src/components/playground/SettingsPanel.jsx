@@ -239,9 +239,9 @@ const SettingsPanel = ({
       if (!inputs.model?.startsWith('music-')) {
         const musicModel = pickAvailableModel([
           'music-2.6-free',
+          'music-cover-free',
           'music-2.6',
           'music-cover',
-          'music-cover-free',
         ]);
         if (musicModel) {
           onInputChange('model', musicModel);
