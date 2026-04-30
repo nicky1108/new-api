@@ -120,6 +120,16 @@ var defaultModelRatio = map[string]float64{
 	"tts-1-1106":                                7.5, // 1k characters -> $0.015
 	"tts-1-hd":                                  15,  // 1k characters -> $0.03
 	"tts-1-hd-1106":                             15,  // 1k characters -> $0.03
+	"speech-2.8-hd":                             15,
+	"speech-2.8-turbo":                          7.5,
+	"speech-2.6-hd":                             15,
+	"speech-2.6-turbo":                          7.5,
+	"speech-2.5-hd-preview":                     15,
+	"speech-2.5-turbo-preview":                  7.5,
+	"speech-02-hd":                              15,
+	"speech-02-turbo":                           7.5,
+	"speech-01-hd":                              15,
+	"speech-01-turbo":                           7.5,
 	"davinci":                                   10,
 	"curie":                                     10,
 	"babbage":                                   10,
@@ -279,6 +289,7 @@ var defaultModelRatio = map[string]float64{
 var defaultModelPrice = map[string]float64{
 	"suno_music":                     0.1,
 	"suno_lyrics":                    0.01,
+	"music-2.5":                      0.1,
 	"dall-e-3":                       0.04,
 	"imagen-3.0-generate-002":        0.03,
 	"black-forest-labs/flux-1.1-pro": 0.04,

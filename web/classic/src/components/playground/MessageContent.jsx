@@ -23,7 +23,11 @@ import MarkdownRenderer from '../common/markdown/MarkdownRenderer';
 import ThinkingContent from './ThinkingContent';
 import { Loader2, Check, X, Settings, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getImageUrlFromContentItem, isAdmin } from '../../helpers/utils';
+import {
+  getAudioUrlFromContentItem,
+  getImageUrlFromContentItem,
+  isAdmin,
+} from '../../helpers/utils';
 
 const MessageContent = ({
   message,
@@ -307,6 +311,9 @@ const MessageContent = ({
             const imageContents = message.content.filter(
               (item) => item.type === 'image_url',
             );
+            const audioContents = message.content.filter(
+              (item) => item.type === 'audio_url',
+            );
 
             return (
               <div>
@@ -339,6 +346,47 @@ const MessageContent = ({
                           >
                             图片加载失败: {imageUrl}
                           </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {audioContents.length > 0 && (
+                  <div className='mb-3 space-y-3'>
+                    {audioContents.map((audioItem, index) => {
+                      const audioUrl = getAudioUrlFromContentItem(audioItem);
+                      if (!audioUrl) {
+                        return null;
+                      }
+                      const title =
+                        audioItem.audio_url?.title ||
+                        (message.role === 'assistant'
+                          ? t('模型返回的音频')
+                          : t('用户音频'));
+                      return (
+                        <div
+                          key={index}
+                          className='rounded-lg border p-3 max-w-xl'
+                          style={{
+                            background: 'var(--semi-color-bg-0)',
+                            borderColor: 'var(--semi-color-border)',
+                          }}
+                        >
+                          <Typography.Text
+                            strong
+                            className='block !text-[var(--semi-color-text-0)] !text-xs mb-2'
+                          >
+                            {title}
+                          </Typography.Text>
+                          <audio
+                            controls
+                            src={audioUrl}
+                            className='w-full'
+                            preload='metadata'
+                          >
+                            {t('当前浏览器不支持音频播放')}
+                          </audio>
                         </div>
                       );
                     })}

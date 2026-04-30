@@ -33,6 +33,14 @@ func PlaygroundImage(c *gin.Context) {
 	playgroundRelay(c, types.RelayFormatOpenAIImage)
 }
 
+func PlaygroundAudio(c *gin.Context) {
+	playgroundRelay(c, types.RelayFormatOpenAIAudio)
+}
+
+func PlaygroundMusic(c *gin.Context) {
+	playgroundRelay(c, types.RelayFormatMiniMaxMusic)
+}
+
 type playgroundImageStreamResult struct {
 	Status   int             `json:"status"`
 	Body     json.RawMessage `json:"body,omitempty"`

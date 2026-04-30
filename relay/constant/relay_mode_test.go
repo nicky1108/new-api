@@ -18,6 +18,16 @@ func TestPath2RelayModePlaygroundImageRoutes(t *testing.T) {
 			path: "/pg/images/edits",
 			want: RelayModeImagesEdits,
 		},
+		{
+			name: "playground audio speech",
+			path: "/pg/audio/speech",
+			want: RelayModeAudioSpeech,
+		},
+		{
+			name: "playground music generation",
+			path: "/pg/music/generations",
+			want: RelayModeMiniMaxMusic,
+		},
 	}
 
 	for _, tt := range tests {

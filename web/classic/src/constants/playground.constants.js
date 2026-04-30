@@ -34,6 +34,8 @@ export const PLAYGROUND_REQUEST_TYPES = {
   CHAT: 'chat',
   IMAGE_GENERATION: 'image_generation',
   IMAGE_EDIT: 'image_edit',
+  SPEECH_SYNTHESIS: 'speech_synthesis',
+  MUSIC_GENERATION: 'music_generation',
 };
 
 // 默认消息示例 - 使用函数生成以支持 i18n
@@ -87,6 +89,8 @@ export const API_ENDPOINTS = {
   IMAGE_EDITS: '/pg/images/edits',
   IMAGE_EDITS_STREAM: '/pg/images/edits/stream',
   IMAGE_JOBS: '/pg/images/jobs',
+  AUDIO_SPEECH: '/pg/audio/speech',
+  MUSIC_GENERATIONS: '/pg/music/generations',
   USER_MODELS: '/api/user/models',
   USER_GROUPS: '/api/user/self/groups',
 };
@@ -110,6 +114,18 @@ export const DEFAULT_CONFIG = {
     imageQuality: '',
     imageN: 1,
     imageResponseFormat: '',
+    speechVoice: 'male-qn-qingse',
+    speechSpeed: 1,
+    speechVolume: 1,
+    speechPitch: 0,
+    speechEmotion: '',
+    speechAudioFormat: 'mp3',
+    speechSampleRate: 32000,
+    speechBitrate: 128000,
+    musicPrompt: '独立民谣, 忧郁, 内省, 适合夜晚',
+    musicSampleRate: 44100,
+    musicBitrate: 256000,
+    musicAudioFormat: 'mp3',
   },
   parameterEnabled: {
     temperature: true,

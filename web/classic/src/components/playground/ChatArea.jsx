@@ -52,6 +52,12 @@ const ChatArea = ({
   } else if (requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT) {
     modeTitle = t('图片编辑');
     placeholder = t('请输入图片编辑指令...');
+  } else if (requestType === PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS) {
+    modeTitle = t('语音合成');
+    placeholder = t('请输入要合成为语音的文本...');
+  } else if (requestType === PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION) {
+    modeTitle = t('音乐生成');
+    placeholder = t('请输入歌词，支持 [verse]、[chorus] 等结构标签...');
   }
 
   const renderInputArea = React.useCallback((props) => {

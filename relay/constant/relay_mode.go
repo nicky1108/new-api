@@ -35,6 +35,7 @@ const (
 	RelayModeAudioSpeech        // tts
 	RelayModeAudioTranscription // whisper
 	RelayModeAudioTranslation   // whisper
+	RelayModeMiniMaxMusic       // minimax music generation
 
 	RelayModeSunoFetch
 	RelayModeSunoFetchByID
@@ -78,12 +79,14 @@ func Path2RelayMode(path string) int {
 		relayMode = RelayModeResponsesCompact
 	} else if strings.HasPrefix(path, "/v1/responses") {
 		relayMode = RelayModeResponses
-	} else if strings.HasPrefix(path, "/v1/audio/speech") {
+	} else if strings.HasPrefix(path, "/v1/audio/speech") || strings.HasPrefix(path, "/pg/audio/speech") {
 		relayMode = RelayModeAudioSpeech
 	} else if strings.HasPrefix(path, "/v1/audio/transcriptions") {
 		relayMode = RelayModeAudioTranscription
 	} else if strings.HasPrefix(path, "/v1/audio/translations") {
 		relayMode = RelayModeAudioTranslation
+	} else if strings.HasPrefix(path, "/pg/music/generations") {
+		relayMode = RelayModeMiniMaxMusic
 	} else if strings.HasPrefix(path, "/v1/rerank") {
 		relayMode = RelayModeRerank
 	} else if strings.HasPrefix(path, "/v1/realtime") {

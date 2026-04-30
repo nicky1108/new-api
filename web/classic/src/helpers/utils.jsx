@@ -458,6 +458,20 @@ export const getImageUrlFromContentItem = (item) => {
   return '';
 };
 
+export const getAudioUrlFromContentItem = (item) => {
+  if (!item) return '';
+  if (item.type === 'audio_url') {
+    if (typeof item.audio_url === 'string') {
+      return item.audio_url;
+    }
+    return item.audio_url?.url || '';
+  }
+  if (item.type === 'audio' && typeof item.url === 'string') {
+    return item.url;
+  }
+  return '';
+};
+
 export const buildImageResponseContent = (response) => {
   const imageItems = [];
   const textParts = [];
@@ -489,6 +503,40 @@ export const buildImageResponseContent = (response) => {
   return [...(text ? [{ type: 'text', text }] : []), ...imageItems];
 };
 
+export const buildAudioResponseContent = ({
+  audioUrl,
+  title = '音频结果',
+  metadata = {},
+}) => {
+  if (!audioUrl) {
+    return [];
+  }
+
+  const textParts = [];
+  if (metadata.duration) {
+    textParts.push(`时长: ${metadata.duration}`);
+  }
+  if (metadata.format) {
+    textParts.push(`格式: ${metadata.format}`);
+  }
+  if (metadata.size) {
+    textParts.push(`大小: ${metadata.size}`);
+  }
+
+  return [
+    ...(textParts.length > 0
+      ? [{ type: 'text', text: textParts.join('\n') }]
+      : []),
+    {
+      type: 'audio_url',
+      audio_url: {
+        url: audioUrl,
+        title,
+      },
+    },
+  ];
+};
+
 export const normalizeAssistantContent = (content) => {
   if (!Array.isArray(content)) {
     return content || '';
@@ -510,6 +558,16 @@ export const normalizeAssistantContent = (content) => {
         return {
           type: 'image_url',
           image_url: { url: imageUrl },
+        };
+      }
+      const audioUrl = getAudioUrlFromContentItem(item);
+      if (audioUrl) {
+        return {
+          type: 'audio_url',
+          audio_url: {
+            url: audioUrl,
+            title: item.audio_url?.title || item.title || '',
+          },
         };
       }
       return item;
@@ -567,6 +625,60 @@ export const buildImageEditFormData = (prompt, imageUrls, inputs) => {
 
   return formData;
 };
+
+export const buildSpeechSynthesisPayload = (text, inputs) => {
+  const audioFormat = inputs.speechAudioFormat || 'mp3';
+  const speed = Number(inputs.speechSpeed || 1);
+  const volume = Number(inputs.speechVolume || 1);
+  const pitch = Number(inputs.speechPitch || 0);
+
+  const payload = {
+    model: inputs.model,
+    group: inputs.group,
+    input: text,
+    voice: inputs.speechVoice || 'male-qn-qingse',
+    response_format: 'hex',
+    speed,
+    metadata: {
+      text,
+      stream: false,
+      output_format: 'hex',
+      voice_setting: {
+        voice_id: inputs.speechVoice || 'male-qn-qingse',
+        speed,
+        vol: volume,
+        pitch,
+      },
+      audio_setting: {
+        sample_rate: Number(inputs.speechSampleRate || 32000),
+        bitrate: Number(inputs.speechBitrate || 128000),
+        format: audioFormat,
+        channel: 1,
+      },
+      subtitle_enable: false,
+    },
+  };
+
+  if (inputs.speechEmotion) {
+    payload.metadata.voice_setting.emotion = inputs.speechEmotion;
+  }
+
+  return payload;
+};
+
+export const buildMusicGenerationPayload = (lyrics, inputs) => ({
+  model: inputs.model,
+  group: inputs.group,
+  prompt: inputs.musicPrompt || '',
+  lyrics,
+  stream: false,
+  output_format: 'hex',
+  audio_setting: {
+    sample_rate: Number(inputs.musicSampleRate || 44100),
+    bitrate: Number(inputs.musicBitrate || 256000),
+    format: inputs.musicAudioFormat || 'mp3',
+  },
+});
 
 // 创建新消息
 export const createMessage = (role, content, options = {}) => ({

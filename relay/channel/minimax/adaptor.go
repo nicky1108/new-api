@@ -127,6 +127,9 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycom
 	if info.RelayMode == constant.RelayModeImagesGenerations {
 		return miniMaxImageHandler(c, resp, info)
 	}
+	if info.RelayMode == constant.RelayModeMiniMaxMusic {
+		return handleMusicResponse(c, resp, info)
+	}
 
 	switch info.RelayFormat {
 	case types.RelayFormatClaude:

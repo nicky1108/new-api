@@ -51,6 +51,8 @@ import {
   buildApiPayload,
   buildImageGenerationPayload,
   buildImageEditFormData,
+  buildSpeechSynthesisPayload,
+  buildMusicGenerationPayload,
   encodeToBase64,
 } from '../../helpers';
 
@@ -226,6 +228,27 @@ const Playground = () => {
         };
       }
 
+      if (inputs.requestType === PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS) {
+        const lastUserMessage = [...message]
+          .reverse()
+          .find((msg) => msg.role === MESSAGE_ROLES.USER);
+        return buildSpeechSynthesisPayload(
+          getTextContent(lastUserMessage) || '今天是不是很开心呀',
+          inputs,
+        );
+      }
+
+      if (inputs.requestType === PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION) {
+        const lastUserMessage = [...message]
+          .reverse()
+          .find((msg) => msg.role === MESSAGE_ROLES.USER);
+        return buildMusicGenerationPayload(
+          getTextContent(lastUserMessage) ||
+            '[verse]\n街灯微亮晚风轻抚\n影子拉长独自漫步',
+          inputs,
+        );
+      }
+
       // 默认预览逻辑
       let messages = [...message];
 
@@ -352,6 +375,42 @@ const Playground = () => {
           endpoint: API_ENDPOINTS.IMAGE_EDITS_STREAM,
           requestType: 'image',
           debugPayload,
+        });
+
+        setTimeout(() => saveMessagesImmediately(newMessages), 0);
+        return newMessages;
+      });
+      return;
+    }
+
+    if (requestType === PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS) {
+      setMessage((prevMessage) => {
+        const newMessages = [...prevMessage, userMessage, loadingMessage];
+        const payload = buildSpeechSynthesisPayload(content, inputs);
+
+        sendRequest(payload, false, {
+          endpoint: API_ENDPOINTS.AUDIO_SPEECH,
+          requestType: 'audio',
+          debugPayload: payload,
+          title: t('语音合成结果'),
+        });
+
+        setTimeout(() => saveMessagesImmediately(newMessages), 0);
+        return newMessages;
+      });
+      return;
+    }
+
+    if (requestType === PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION) {
+      setMessage((prevMessage) => {
+        const newMessages = [...prevMessage, userMessage, loadingMessage];
+        const payload = buildMusicGenerationPayload(content, inputs);
+
+        sendRequest(payload, false, {
+          endpoint: API_ENDPOINTS.MUSIC_GENERATIONS,
+          requestType: 'audio',
+          debugPayload: payload,
+          title: t('音乐生成结果'),
         });
 
         setTimeout(() => saveMessagesImmediately(newMessages), 0);

@@ -46,6 +46,8 @@ func GetAndValidateRequest(c *gin.Context, format types.RelayFormat) (request dt
 		request, err = GetAndValidateRerankRequest(c)
 	case types.RelayFormatOpenAIAudio:
 		request, err = GetAndValidAudioRequest(c, relayMode)
+	case types.RelayFormatMiniMaxMusic:
+		request, err = GetAndValidateMiniMaxMusicRequest(c, relayMode)
 	case types.RelayFormatOpenAIRealtime:
 		request = &dto.BaseRequest{}
 	default:
@@ -74,6 +76,27 @@ func GetAndValidAudioRequest(c *gin.Context, relayMode int) (*dto.AudioRequest, 
 		}
 	}
 	return audioRequest, nil
+}
+
+func GetAndValidateMiniMaxMusicRequest(c *gin.Context, relayMode int) (*dto.MiniMaxMusicRequest, error) {
+	if relayMode != relayconstant.RelayModeMiniMaxMusic {
+		return nil, errors.New("unsupported music relay mode")
+	}
+
+	request := &dto.MiniMaxMusicRequest{}
+	if err := common.UnmarshalBodyReusable(c, request); err != nil {
+		return nil, err
+	}
+	if request.Model == "" {
+		return nil, errors.New("model is required")
+	}
+	if strings.TrimSpace(request.Lyrics) == "" {
+		return nil, errors.New("lyrics is required")
+	}
+	if request.Stream {
+		return nil, errors.New("stream music generation is not supported in playground")
+	}
+	return request, nil
 }
 
 func GetAndValidateRerankRequest(c *gin.Context) (*dto.RerankRequest, error) {

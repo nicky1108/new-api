@@ -31,6 +31,7 @@ import {
   processThinkTags,
   processIncompleteThinkTags,
   buildImageResponseContent,
+  buildAudioResponseContent,
   normalizeAssistantContent,
 } from '../../helpers';
 
@@ -217,6 +218,43 @@ const getImageStreamBody = (streamResult) => {
     }
   }
   return {};
+};
+
+const blobToDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error('读取音频失败'));
+    reader.readAsDataURL(blob);
+  });
+
+const formatBytes = (bytes) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '';
+  }
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+};
+
+const getAudioFormatFromContentType = (contentType) => {
+  if (!contentType) {
+    return '';
+  }
+  if (contentType.includes('mpeg')) {
+    return 'mp3';
+  }
+  if (contentType.includes('wav')) {
+    return 'wav';
+  }
+  if (contentType.includes('flac')) {
+    return 'flac';
+  }
+  return contentType.split(';')[0] || '';
 };
 
 export const useApiRequest = (
@@ -627,6 +665,150 @@ export const useApiRequest = (
     ],
   );
 
+  const handleMediaRequest = useCallback(
+    async (endpoint, payload, debugPayload, mediaOptions = {}) => {
+      setDebugData((prev) => ({
+        ...prev,
+        request: debugPayload || payload,
+        timestamp: new Date().toISOString(),
+        response: null,
+        sseMessages: null,
+        isStreaming: false,
+      }));
+      setActiveDebugTab(DEBUG_TABS.REQUEST);
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'New-Api-User': getUserIdFromLocalStorage(),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          let errorBody = '';
+          let parsedError = null;
+          try {
+            errorBody = await response.text();
+            const errorJson = JSON.parse(errorBody);
+            if (errorJson?.error) {
+              parsedError = errorJson.error;
+            }
+          } catch (e) {
+            if (!errorBody) {
+              errorBody = '无法读取错误响应体';
+            }
+          }
+
+          const err = new Error(
+            parsedError?.message ||
+              `HTTP error! status: ${response.status}, body: ${errorBody}`,
+          );
+          err.errorCode = parsedError?.code || null;
+          err.errorType = parsedError?.type || null;
+          throw err;
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await response.json();
+          setDebugData((prev) => ({
+            ...prev,
+            response: JSON.stringify(data, null, 2),
+          }));
+          setActiveDebugTab(DEBUG_TABS.RESPONSE);
+
+          const err = new Error(t('接口未返回可播放的音频'));
+          err.response = data;
+          throw err;
+        }
+
+        const blob = await response.blob();
+        const audioUrl = await blobToDataUrl(blob);
+        const responseInfo = {
+          content_type: contentType,
+          size: blob.size,
+          size_display: formatBytes(blob.size),
+        };
+
+        setDebugData((prev) => ({
+          ...prev,
+          response: JSON.stringify(responseInfo, null, 2),
+        }));
+        setActiveDebugTab(DEBUG_TABS.RESPONSE);
+
+        const audioContent = buildAudioResponseContent({
+          audioUrl,
+          title: mediaOptions.title || t('音频结果'),
+          metadata: {
+            format: getAudioFormatFromContentType(contentType),
+            size: formatBytes(blob.size),
+          },
+        });
+
+        setMessage((prevMessage) => {
+          const newMessages = [...prevMessage];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage?.status === MESSAGE_STATUS.LOADING) {
+            const autoCollapseState = applyAutoCollapseLogic(
+              lastMessage,
+              true,
+            );
+
+            newMessages[newMessages.length - 1] = {
+              ...lastMessage,
+              content:
+                audioContent.length > 0
+                  ? audioContent
+                  : t('接口未返回可播放的音频'),
+              status: MESSAGE_STATUS.COMPLETE,
+              ...autoCollapseState,
+            };
+          }
+          setTimeout(() => saveMessages(newMessages), 0);
+          return newMessages;
+        });
+      } catch (error) {
+        console.error('Media request error:', error);
+
+        const errorInfo = handleApiError(error);
+        setDebugData((prev) => ({
+          ...prev,
+          response: JSON.stringify(errorInfo, null, 2),
+        }));
+        setActiveDebugTab(DEBUG_TABS.RESPONSE);
+
+        setMessage((prevMessage) => {
+          const newMessages = [...prevMessage];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage?.status === MESSAGE_STATUS.LOADING) {
+            const autoCollapseState = applyAutoCollapseLogic(lastMessage, true);
+
+            newMessages[newMessages.length - 1] = {
+              ...lastMessage,
+              content: t('请求发生错误: ') + error.message,
+              errorCode: error.errorCode || null,
+              status: MESSAGE_STATUS.ERROR,
+              ...autoCollapseState,
+            };
+          }
+          setTimeout(() => saveMessages(newMessages), 0);
+          return newMessages;
+        });
+      }
+    },
+    [
+      setDebugData,
+      setActiveDebugTab,
+      setMessage,
+      t,
+      applyAutoCollapseLogic,
+      saveMessages,
+    ],
+  );
+
   // SSE请求
   const handleSSE = useCallback(
     (payload) => {
@@ -877,13 +1059,23 @@ export const useApiRequest = (
         return;
       }
 
+      if (options.requestType === 'audio') {
+        handleMediaRequest(
+          options.endpoint || API_ENDPOINTS.AUDIO_SPEECH,
+          payload,
+          options.debugPayload,
+          { title: options.title },
+        );
+        return;
+      }
+
       if (isStream) {
         handleSSE(payload);
       } else {
         handleNonStreamRequest(payload);
       }
     },
-    [handleSSE, handleNonStreamRequest, handleImageRequest],
+    [handleSSE, handleNonStreamRequest, handleImageRequest, handleMediaRequest],
   );
 
   return {

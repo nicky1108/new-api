@@ -37,6 +37,8 @@ import {
   Settings,
   MessageSquare,
   Wand2,
+  Volume2,
+  Music,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { renderGroupOption, selectFilter } from '../../helpers';
@@ -59,6 +61,23 @@ const IMAGE_RESPONSE_FORMAT_OPTIONS = [
   { label: 'auto', value: '' },
   { label: 'url', value: 'url' },
   { label: 'b64_json', value: 'b64_json' },
+];
+
+const AUDIO_FORMAT_OPTIONS = [
+  { label: 'mp3', value: 'mp3' },
+  { label: 'wav', value: 'wav' },
+  { label: 'flac', value: 'flac' },
+];
+
+const SPEECH_EMOTION_OPTIONS = [
+  { label: 'auto', value: '' },
+  { label: 'happy', value: 'happy' },
+  { label: 'sad', value: 'sad' },
+  { label: 'angry', value: 'angry' },
+  { label: 'fearful', value: 'fearful' },
+  { label: 'disgusted', value: 'disgusted' },
+  { label: 'surprised', value: 'surprised' },
+  { label: 'neutral', value: 'neutral' },
 ];
 
 const SettingsPanel = ({
@@ -86,6 +105,10 @@ const SettingsPanel = ({
   const isImageGenerationMode =
     requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_GENERATION;
   const isImageEditMode = requestType === PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT;
+  const isSpeechSynthesisMode =
+    requestType === PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS;
+  const isMusicGenerationMode =
+    requestType === PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION;
 
   const currentConfig = {
     inputs,
@@ -93,6 +116,39 @@ const SettingsPanel = ({
     showDebugPanel,
     customRequestMode,
     customRequestBody,
+  };
+
+  const hasModelOption = (modelName) =>
+    (models || []).some(
+      (option) => option?.value === modelName || option?.label === modelName,
+    );
+
+  const pickAvailableModel = (candidates) =>
+    candidates.find((modelName) => hasModelOption(modelName));
+
+  const handleRequestTypeChange = (value) => {
+    onInputChange('requestType', value);
+
+    if (value === PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS) {
+      const currentModel = inputs.model || '';
+      if (!currentModel.startsWith('speech-')) {
+        const speechModel = pickAvailableModel([
+          'speech-2.8-turbo',
+          'speech-2.6-turbo',
+          'speech-02-turbo',
+          'speech-01-turbo',
+        ]);
+        if (speechModel) {
+          onInputChange('model', speechModel);
+        }
+      }
+    }
+
+    if (value === PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION) {
+      if (inputs.model !== 'music-2.5' && hasModelOption('music-2.5')) {
+        onInputChange('model', 'music-2.5');
+      }
+    }
   };
 
   return (
@@ -169,11 +225,10 @@ const SettingsPanel = ({
             type='button'
             buttonSize='small'
             value={inputs.requestType || PLAYGROUND_REQUEST_TYPES.CHAT}
-            onChange={(event) =>
-              onInputChange('requestType', event.target.value)
-            }
+            onChange={(event) => handleRequestTypeChange(event.target.value)}
             disabled={customRequestMode}
             className='w-full'
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
           >
             <Radio value={PLAYGROUND_REQUEST_TYPES.CHAT}>{t('对话')}</Radio>
             <Radio value={PLAYGROUND_REQUEST_TYPES.IMAGE_GENERATION}>
@@ -181,6 +236,12 @@ const SettingsPanel = ({
             </Radio>
             <Radio value={PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT}>
               {t('图片编辑')}
+            </Radio>
+            <Radio value={PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS}>
+              {t('语音合成')}
+            </Radio>
+            <Radio value={PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION}>
+              {t('音乐生成')}
             </Radio>
           </RadioGroup>
         </div>
@@ -344,6 +405,222 @@ const SettingsPanel = ({
               }
               disabled={customRequestMode}
             />
+          </div>
+        )}
+
+        {isSpeechSynthesisMode && (
+          <div className={customRequestMode ? 'opacity-50' : ''}>
+            <div className='flex items-center gap-2 mb-3'>
+              <Volume2 size={16} className='text-gray-500' />
+              <Typography.Text strong className='text-sm'>
+                {t('语音参数')}
+              </Typography.Text>
+            </div>
+            <div className='space-y-3'>
+              <div>
+                <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                  {t('音色 ID')}
+                </Typography.Text>
+                <Input
+                  value={inputs.speechVoice}
+                  onChange={(value) => onInputChange('speechVoice', value)}
+                  placeholder='male-qn-qingse'
+                  disabled={customRequestMode}
+                  className='!rounded-lg'
+                />
+              </div>
+              <div className='grid grid-cols-2 gap-3'>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('语速')}
+                  </Typography.Text>
+                  <InputNumber
+                    value={inputs.speechSpeed}
+                    min={0.5}
+                    max={2}
+                    step={0.1}
+                    precision={1}
+                    onNumberChange={(value) =>
+                      onInputChange('speechSpeed', value || 1)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('音量')}
+                  </Typography.Text>
+                  <InputNumber
+                    value={inputs.speechVolume}
+                    min={0.1}
+                    max={10}
+                    step={0.1}
+                    precision={1}
+                    onNumberChange={(value) =>
+                      onInputChange('speechVolume', value || 1)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+              </div>
+              <div className='grid grid-cols-2 gap-3'>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('语调')}
+                  </Typography.Text>
+                  <InputNumber
+                    value={inputs.speechPitch}
+                    min={-12}
+                    max={12}
+                    precision={0}
+                    onNumberChange={(value) =>
+                      onInputChange('speechPitch', value || 0)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('情绪')}
+                  </Typography.Text>
+                  <Select
+                    value={inputs.speechEmotion}
+                    optionList={SPEECH_EMOTION_OPTIONS}
+                    onChange={(value) => onInputChange('speechEmotion', value)}
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+              </div>
+              <div className='grid grid-cols-3 gap-3'>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('格式')}
+                  </Typography.Text>
+                  <Select
+                    value={inputs.speechAudioFormat}
+                    optionList={AUDIO_FORMAT_OPTIONS}
+                    onChange={(value) =>
+                      onInputChange('speechAudioFormat', value)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('采样率')}
+                  </Typography.Text>
+                  <InputNumber
+                    value={inputs.speechSampleRate}
+                    min={8000}
+                    max={48000}
+                    step={1000}
+                    precision={0}
+                    onNumberChange={(value) =>
+                      onInputChange('speechSampleRate', value || 32000)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('码率')}
+                  </Typography.Text>
+                  <InputNumber
+                    value={inputs.speechBitrate}
+                    min={32000}
+                    max={320000}
+                    step={16000}
+                    precision={0}
+                    onNumberChange={(value) =>
+                      onInputChange('speechBitrate', value || 128000)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isMusicGenerationMode && (
+          <div className={customRequestMode ? 'opacity-50' : ''}>
+            <div className='flex items-center gap-2 mb-3'>
+              <Music size={16} className='text-gray-500' />
+              <Typography.Text strong className='text-sm'>
+                {t('音乐参数')}
+              </Typography.Text>
+            </div>
+            <div className='space-y-3'>
+              <div>
+                <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                  {t('歌曲描述')}
+                </Typography.Text>
+                <Input
+                  value={inputs.musicPrompt}
+                  onChange={(value) => onInputChange('musicPrompt', value)}
+                  placeholder={t('例如：独立民谣, 忧郁, 夜晚咖啡馆')}
+                  disabled={customRequestMode}
+                  className='!rounded-lg'
+                />
+              </div>
+              <div className='grid grid-cols-3 gap-3'>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('格式')}
+                  </Typography.Text>
+                  <Select
+                    value={inputs.musicAudioFormat}
+                    optionList={AUDIO_FORMAT_OPTIONS}
+                    onChange={(value) =>
+                      onInputChange('musicAudioFormat', value)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('采样率')}
+                  </Typography.Text>
+                  <InputNumber
+                    value={inputs.musicSampleRate}
+                    min={8000}
+                    max={48000}
+                    step={1000}
+                    precision={0}
+                    onNumberChange={(value) =>
+                      onInputChange('musicSampleRate', value || 44100)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+                <div>
+                  <Typography.Text className='text-xs text-gray-500 mb-1 block'>
+                    {t('码率')}
+                  </Typography.Text>
+                  <InputNumber
+                    value={inputs.musicBitrate}
+                    min={32000}
+                    max={320000}
+                    step={16000}
+                    precision={0}
+                    onNumberChange={(value) =>
+                      onInputChange('musicBitrate', value || 256000)
+                    }
+                    style={{ width: '100%' }}
+                    disabled={customRequestMode}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
