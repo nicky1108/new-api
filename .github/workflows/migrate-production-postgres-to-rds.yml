@@ -1,0 +1,51 @@
+name: Migrate Production PostgreSQL to RDS
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type MIGRATE_TO_RDS to run the production database migration
+        required: true
+
+concurrency:
+  group: new-api-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  APP_DIR: /opt/new-api
+  NEW_API_PORT: "3000"
+
+jobs:
+  migrate:
+    name: Stop writes, migrate, verify, and cut over
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Require explicit confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "MIGRATE_TO_RDS" ]; then
+            echo "Confirmation did not match MIGRATE_TO_RDS"
+            exit 1
+          fi
+
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload migration script
+        run: |
+          scp -i ~/.ssh/deploy_key deploy/migrate-production-postgres-to-rds.sh "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${APP_DIR}/migrate-production-postgres-to-rds.sh"
+          ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "chmod 700 '${APP_DIR}/migrate-production-postgres-to-rds.sh'"
+
+      - name: Run migration
+        run: |
+          printf '%s\n' "${{ secrets.RDS_SQL_DSN }}" | ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "APP_DIR='${APP_DIR}' NEW_API_PORT='${NEW_API_PORT}' '${APP_DIR}/migrate-production-postgres-to-rds.sh' --dsn-from-stdin"

@@ -10,7 +10,7 @@ services:
       - ./data:/data
       - ./logs:/app/logs
     environment:
-      SQL_DSN: postgresql://${POSTGRES_USER:-newapi}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-newapi}
+      SQL_DSN: ${SQL_DSN:-postgresql://${POSTGRES_USER:-newapi}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-newapi}}
       REDIS_CONN_STRING: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://openhubs.xyz}
