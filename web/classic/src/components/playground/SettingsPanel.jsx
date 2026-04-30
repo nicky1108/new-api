@@ -344,7 +344,7 @@ const SettingsPanel = ({
             value={inputs.requestType || PLAYGROUND_REQUEST_TYPES.CHAT}
             onChange={(event) => handleRequestTypeChange(event.target.value)}
             disabled={customRequestMode}
-            className='w-full'
+            className='w-full playground-request-type-radio'
             style={requestTypeGroupStyle}
           >
             <Radio

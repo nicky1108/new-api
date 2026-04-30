@@ -611,6 +611,16 @@ html.dark .sbg-variant-green {
   background: transparent;
 }
 
+/* 操练场调用类型按钮组 */
+.playground-request-type-radio.semi-radioGroup-buttonRadio,
+.playground-request-type-radio .semi-radioGroup-buttonRadio {
+  padding: 2px 4px;
+}
+
+.playground-request-type-radio .semi-radio-content {
+  width: 100%;
+}
+
 /* ==================== 同步倍率 - 渠道选择器 ==================== */
 
 .components-transfer-source-item,
