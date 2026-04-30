@@ -145,13 +145,19 @@ const SettingsPanel = ({
     display: 'grid',
     gridTemplateColumns: styleState.isMobile
       ? 'repeat(2, minmax(0, 1fr))'
-      : 'repeat(5, minmax(0, 1fr))',
-    gap: 6,
+      : 'repeat(auto-fit, minmax(46px, 1fr))',
+    gap: 4,
+    maxWidth: '100%',
+    overflowX: 'hidden',
+    boxSizing: 'border-box',
   };
   const requestTypeRadioStyle = {
     width: '100%',
     minWidth: 0,
     marginRight: 0,
+    padding: '2px 1px',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   };
 
   const hasModelOption = (modelName) =>
@@ -345,7 +351,7 @@ const SettingsPanel = ({
               value={PLAYGROUND_REQUEST_TYPES.CHAT}
               style={requestTypeRadioStyle}
             >
-              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+              <span className='block w-full min-w-0 overflow-hidden text-center text-[11px] leading-4 whitespace-nowrap'>
                 {t('对话')}
               </span>
             </Radio>
@@ -353,7 +359,7 @@ const SettingsPanel = ({
               value={PLAYGROUND_REQUEST_TYPES.IMAGE_GENERATION}
               style={requestTypeRadioStyle}
             >
-              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+              <span className='block w-full min-w-0 overflow-hidden text-center text-[11px] leading-4 whitespace-nowrap'>
                 {t('图片生成')}
               </span>
             </Radio>
@@ -361,7 +367,7 @@ const SettingsPanel = ({
               value={PLAYGROUND_REQUEST_TYPES.IMAGE_EDIT}
               style={requestTypeRadioStyle}
             >
-              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+              <span className='block w-full min-w-0 overflow-hidden text-center text-[11px] leading-4 whitespace-nowrap'>
                 {t('图片编辑')}
               </span>
             </Radio>
@@ -369,7 +375,7 @@ const SettingsPanel = ({
               value={PLAYGROUND_REQUEST_TYPES.SPEECH_SYNTHESIS}
               style={requestTypeRadioStyle}
             >
-              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+              <span className='block w-full min-w-0 overflow-hidden text-center text-[11px] leading-4 whitespace-nowrap'>
                 {t('语音合成')}
               </span>
             </Radio>
@@ -377,7 +383,7 @@ const SettingsPanel = ({
               value={PLAYGROUND_REQUEST_TYPES.MUSIC_GENERATION}
               style={requestTypeRadioStyle}
             >
-              <span className='block w-full min-w-0 text-center text-xs whitespace-nowrap'>
+              <span className='block w-full min-w-0 overflow-hidden text-center text-[11px] leading-4 whitespace-nowrap'>
                 {t('音乐生成')}
               </span>
             </Radio>
