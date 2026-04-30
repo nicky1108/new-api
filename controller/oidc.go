@@ -154,6 +154,10 @@ func OidcAuth(c *gin.Context) {
 			} else {
 				user.DisplayName = "OIDC User"
 			}
+			if err := setRegistrationIP(c, &user); err != nil {
+				respondRegistrationIPError(c, err)
+				return
+			}
 			err := user.Insert(0)
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{

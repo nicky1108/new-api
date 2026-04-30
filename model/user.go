@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/dto"
@@ -16,7 +17,11 @@ import (
 	"gorm.io/gorm"
 )
 
-const UserNameMaxLength = 20
+const (
+	UserNameMaxLength       = 20
+	RegisterIPLimitWindow   = 24 * time.Hour
+	RegisterIPLimitMaxCount = 3
+)
 
 // User if you add sensitive fields, don't forget to clean them in setupLogin function.
 // Otherwise, the sensitive information will be saved on local storage in plain text!
@@ -50,6 +55,7 @@ type User struct {
 	Setting          string         `json:"setting" gorm:"type:text;column:setting"`
 	Remark           string         `json:"remark,omitempty" gorm:"type:varchar(255)" validate:"max=255"`
 	StripeCustomer   string         `json:"stripe_customer" gorm:"type:varchar(64);column:stripe_customer;index"`
+	RegistrationIP   string         `json:"registration_ip" gorm:"type:varchar(45);column:registration_ip;index"`
 	CreatedAt        int64          `json:"created_at" gorm:"autoCreateTime;column:created_at"`
 	LastLoginAt      int64          `json:"last_login_at" gorm:"default:0;column:last_login_at"`
 }
@@ -182,6 +188,30 @@ func CheckUserExistOrDeleted(username string, email string) (bool, error) {
 	}
 	// exist, return true, nil
 	return true, nil
+}
+
+func CountRecentRegistrationsFromIP(ip string, since int64) (int64, error) {
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return 0, nil
+	}
+
+	var count int64
+	err := DB.Unscoped().Model(&User{}).
+		Where("registration_ip = ? AND created_at >= ?", ip, since).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func IsRegistrationIPLimited(ip string, since int64) (bool, error) {
+	count, err := CountRecentRegistrationsFromIP(ip, since)
+	if err != nil {
+		return false, err
+	}
+	return count >= RegisterIPLimitMaxCount, nil
 }
 
 func GetMaxUserId() int {

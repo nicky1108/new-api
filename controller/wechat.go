@@ -96,6 +96,10 @@ func WeChatAuth(c *gin.Context) {
 			user.Role = common.RoleCommonUser
 			user.Status = common.UserStatusEnabled
 
+			if err := setRegistrationIP(c, &user); err != nil {
+				respondRegistrationIPError(c, err)
+				return
+			}
 			if err := user.Insert(0); err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,

@@ -185,6 +185,10 @@ func Register(c *gin.Context) {
 	if common.EmailVerificationEnabled {
 		cleanUser.Email = user.Email
 	}
+	if err := setRegistrationIP(c, &cleanUser); err != nil {
+		respondRegistrationIPError(c, err)
+		return
+	}
 	if err := cleanUser.Insert(inviterId); err != nil {
 		common.ApiError(c, err)
 		return
