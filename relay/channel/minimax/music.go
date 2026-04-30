@@ -58,6 +58,7 @@ func (a *Adaptor) ConvertMiniMaxMusicRequest(c *gin.Context, info *relaycommon.R
 		request.Model = info.OriginModelName
 	}
 	request.Stream = false
+	c.Set("minimax_music_request_model", request.Model)
 	c.Set("music_audio_format", request.AudioSetting.Format)
 
 	jsonData, err := common.Marshal(request)
@@ -65,6 +66,28 @@ func (a *Adaptor) ConvertMiniMaxMusicRequest(c *gin.Context, info *relaycommon.R
 		return nil, fmt.Errorf("error marshalling minimax music request: %w", err)
 	}
 	return bytes.NewReader(jsonData), nil
+}
+
+func fallbackMiniMaxMusicModel(model string) (string, bool) {
+	switch model {
+	case "music-2.6":
+		return "music-2.6-free", true
+	case "music-cover":
+		return "music-cover-free", true
+	default:
+		return "", false
+	}
+}
+
+func miniMaxMusicErrorMessage(model string, baseResp MiniMaxBaseResp) string {
+	message := fmt.Sprintf("minimax music error: %d - %s", baseResp.StatusCode, baseResp.StatusMsg)
+	if baseResp.StatusCode != 2013 {
+		return message
+	}
+	if fallbackModel, ok := fallbackMiniMaxMusicModel(model); ok {
+		return fmt.Sprintf("%s; MiniMax restricts %s to Token Plan or paid accounts, try %s for regular API keys", message, model, fallbackModel)
+	}
+	return message
 }
 
 func handleMusicResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.NewAPIError) {
@@ -88,8 +111,14 @@ func handleMusicResponse(c *gin.Context, resp *http.Response, info *relaycommon.
 	}
 
 	if minimaxResp.BaseResp.StatusCode != 0 {
+		c.Set("minimax_music_status_code", int(minimaxResp.BaseResp.StatusCode))
+		c.Set("minimax_music_status_msg", minimaxResp.BaseResp.StatusMsg)
+		model := c.GetString("minimax_music_request_model")
+		if model == "" {
+			model = info.OriginModelName
+		}
 		return nil, types.NewErrorWithStatusCode(
-			fmt.Errorf("minimax music error: %d - %s", minimaxResp.BaseResp.StatusCode, minimaxResp.BaseResp.StatusMsg),
+			fmt.Errorf("%s", miniMaxMusicErrorMessage(model, minimaxResp.BaseResp)),
 			types.ErrorCodeBadResponse,
 			http.StatusBadRequest,
 		)

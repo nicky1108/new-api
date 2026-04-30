@@ -129,6 +129,33 @@ func TestConvertMiniMaxMusicRequestDefaults(t *testing.T) {
 	}
 }
 
+func TestFallbackMiniMaxMusicModel(t *testing.T) {
+	t.Parallel()
+
+	if got, ok := fallbackMiniMaxMusicModel("music-2.6"); !ok || got != "music-2.6-free" {
+		t.Fatalf("fallbackMiniMaxMusicModel(music-2.6) = %q, %v; want music-2.6-free, true", got, ok)
+	}
+	if got, ok := fallbackMiniMaxMusicModel("music-cover"); !ok || got != "music-cover-free" {
+		t.Fatalf("fallbackMiniMaxMusicModel(music-cover) = %q, %v; want music-cover-free, true", got, ok)
+	}
+	if got, ok := fallbackMiniMaxMusicModel("music-2.6-free"); ok || got != "" {
+		t.Fatalf("fallbackMiniMaxMusicModel(music-2.6-free) = %q, %v; want empty, false", got, ok)
+	}
+}
+
+func TestMiniMaxMusicErrorMessageAdvisesFreeModel(t *testing.T) {
+	t.Parallel()
+
+	got := miniMaxMusicErrorMessage("music-2.6", MiniMaxBaseResp{
+		StatusCode: 2013,
+		StatusMsg:  "invalid params, invalid model",
+	})
+
+	if !strings.Contains(got, "music-2.6-free") {
+		t.Fatalf("message = %q, want free model advice", got)
+	}
+}
+
 func TestConvertImageRequest(t *testing.T) {
 	t.Parallel()
 

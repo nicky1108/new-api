@@ -27,8 +27,8 @@ var ModelList = []string{
 	"MiniMax-M2.5-highspeed",
 	"image-01",
 	"image-01-live",
-	"music-2.6",
 	"music-2.6-free",
+	"music-2.6",
 	"music-cover",
 	"music-cover-free",
 }
