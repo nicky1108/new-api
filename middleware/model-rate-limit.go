@@ -3,8 +3,10 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
@@ -163,11 +165,44 @@ func memoryRateLimitHandler(duration int64, totalMaxCount, successMaxCount int) 
 	}
 }
 
+func isLocalModelRateLimitRequest(c *gin.Context) bool {
+	if c == nil {
+		return false
+	}
+	if forwardedHeaderHasNonLocalIP(c.GetHeader("X-Forwarded-For")) || forwardedHeaderHasNonLocalIP(c.GetHeader("X-Real-IP")) {
+		return false
+	}
+	return isLoopbackIP(c.ClientIP())
+}
+
+func forwardedHeaderHasNonLocalIP(header string) bool {
+	if strings.TrimSpace(header) == "" {
+		return false
+	}
+	for _, part := range strings.Split(header, ",") {
+		if !isLoopbackIP(strings.TrimSpace(part)) {
+			return true
+		}
+	}
+	return false
+}
+
+func isLoopbackIP(value string) bool {
+	ip := net.ParseIP(strings.TrimSpace(value))
+	return ip != nil && ip.IsLoopback()
+}
+
 // ModelRequestRateLimit 模型请求限流中间件
 func ModelRequestRateLimit() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		// 在每个请求时检查是否启用限流
 		if !setting.ModelRequestRateLimitEnabled {
+			c.Next()
+			return
+		}
+
+		// 本机调用用于内部服务互通，不计入模型请求限流。
+		if isLocalModelRateLimitRequest(c) {
 			c.Next()
 			return
 		}
