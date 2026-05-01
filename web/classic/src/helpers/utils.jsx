@@ -340,15 +340,24 @@ export function compareObjects(oldObject, newObject) {
 let messageId = 4;
 export const generateMessageId = () => `${messageId++}`;
 
+export const getTextFromContent = (content) => {
+  if (!content) return '';
+
+  if (Array.isArray(content)) {
+    return content
+      .filter((item) => item?.type === 'text')
+      .map((item) => item.text || '')
+      .join('\n')
+      .trim();
+  }
+
+  return typeof content === 'string' ? content : '';
+};
+
 // 提取消息中的文本内容
 export const getTextContent = (message) => {
-  if (!message || !message.content) return '';
-
-  if (Array.isArray(message.content)) {
-    const textContent = message.content.find((item) => item.type === 'text');
-    return textContent?.text || '';
-  }
-  return typeof message.content === 'string' ? message.content : '';
+  if (!message) return '';
+  return getTextFromContent(message.content);
 };
 
 // 处理 think 标签
@@ -708,13 +717,20 @@ export const hasImageContent = (message) => {
   );
 };
 
+export const isTextOnlyChatModel = (model) =>
+  String(model || '')
+    .toLowerCase()
+    .includes('deepseek');
+
 // 格式化消息用于API请求
-export const formatMessageForAPI = (message) => {
+export const formatMessageForAPI = (message, options = {}) => {
   if (!message) return null;
 
   return {
     role: message.role,
-    content: message.content,
+    content: options.textOnly
+      ? getTextFromContent(message.content)
+      : message.content,
   };
 };
 

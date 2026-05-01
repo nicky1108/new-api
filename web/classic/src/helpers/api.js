@@ -21,6 +21,7 @@ import {
   getUserIdFromLocalStorage,
   showError,
   formatMessageForAPI,
+  isTextOnlyChatModel,
   isValidMessage,
 } from './utils';
 import axios from 'axios';
@@ -36,7 +37,6 @@ export let API = axios.create({
   },
 });
 
-
 function redirectToOAuthUrl(url, options = {}) {
   const { openInNewTab = false } = options;
   const targetUrl = typeof url === 'string' ? url : url.toString();
@@ -48,7 +48,6 @@ function redirectToOAuthUrl(url, options = {}) {
 
   window.location.assign(targetUrl);
 }
-
 
 function patchAPIInstance(instance) {
   const originalGet = instance.get.bind(instance);
@@ -115,10 +114,17 @@ export const buildApiPayload = (
   inputs,
   parameterEnabled,
 ) => {
+  const textOnly = isTextOnlyChatModel(inputs.model);
   const processedMessages = messages
     .filter(isValidMessage)
-    .map(formatMessageForAPI)
-    .filter(Boolean);
+    .map((message) => formatMessageForAPI(message, { textOnly }))
+    .filter((message) => {
+      if (!message) return false;
+      if (!textOnly) return true;
+      return (
+        typeof message.content !== 'string' || message.content.trim() !== ''
+      );
+    });
 
   // 如果有系统提示，插入到消息开头
   if (systemPrompt && systemPrompt.trim()) {

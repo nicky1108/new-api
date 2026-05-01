@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -370,6 +371,13 @@ func playgroundRelay(c *gin.Context, relayFormat types.RelayFormat) {
 		return
 	}
 
+	if relayFormat == types.RelayFormatOpenAI && common.GetContextKeyInt(c, constant.ContextKeyChannelType) == constant.ChannelTypeDeepSeek {
+		if err := normalizePlaygroundChatBodyToTextOnly(c); err != nil {
+			newAPIError = types.NewError(err, types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
+			return
+		}
+	}
+
 	relayInfo, err := relaycommon.GenRelayInfo(c, relayFormat, nil, nil)
 	if err != nil {
 		newAPIError = types.NewError(err, types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
@@ -394,4 +402,104 @@ func playgroundRelay(c *gin.Context, relayFormat types.RelayFormat) {
 	_ = middleware.SetupContextForToken(c, tempToken)
 
 	Relay(c, relayFormat)
+}
+
+func normalizePlaygroundChatBodyToTextOnly(c *gin.Context) error {
+	bodyStorage, err := common.GetBodyStorage(c)
+	if err != nil {
+		return err
+	}
+	bodyBytes, err := bodyStorage.Bytes()
+	if err != nil {
+		return err
+	}
+
+	normalizedBody, changed, err := buildTextOnlyPlaygroundChatBody(bodyBytes)
+	if err != nil {
+		return err
+	}
+	if !changed {
+		if _, seekErr := bodyStorage.Seek(0, io.SeekStart); seekErr != nil {
+			return seekErr
+		}
+		c.Request.Body = io.NopCloser(bodyStorage)
+		return nil
+	}
+
+	newStorage, err := common.CreateBodyStorage(normalizedBody)
+	if err != nil {
+		return err
+	}
+	_ = bodyStorage.Close()
+	c.Set(common.KeyBodyStorage, newStorage)
+	c.Request.Body = io.NopCloser(newStorage)
+	return nil
+}
+
+func buildTextOnlyPlaygroundChatBody(bodyBytes []byte) ([]byte, bool, error) {
+	var payload map[string]any
+	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
+		return nil, false, err
+	}
+
+	messages, ok := payload["messages"].([]any)
+	if !ok {
+		return bodyBytes, false, nil
+	}
+
+	normalizedMessages := make([]any, 0, len(messages))
+	changed := false
+	for _, item := range messages {
+		message, ok := item.(map[string]any)
+		if !ok {
+			normalizedMessages = append(normalizedMessages, item)
+			continue
+		}
+
+		contentParts, ok := message["content"].([]any)
+		if !ok {
+			normalizedMessages = append(normalizedMessages, message)
+			continue
+		}
+
+		text := textFromPlaygroundContentParts(contentParts)
+		if strings.TrimSpace(text) == "" {
+			changed = true
+			continue
+		}
+
+		message["content"] = text
+		changed = true
+		normalizedMessages = append(normalizedMessages, message)
+	}
+
+	if !changed {
+		return bodyBytes, false, nil
+	}
+
+	payload["messages"] = normalizedMessages
+	normalizedBody, err := json.Marshal(payload)
+	if err != nil {
+		return nil, false, err
+	}
+	return normalizedBody, true, nil
+}
+
+func textFromPlaygroundContentParts(parts []any) string {
+	textParts := make([]string, 0, len(parts))
+	for _, part := range parts {
+		partMap, ok := part.(map[string]any)
+		if !ok {
+			continue
+		}
+		if partMap["type"] != "text" {
+			continue
+		}
+		text, ok := partMap["text"].(string)
+		if !ok {
+			continue
+		}
+		textParts = append(textParts, text)
+	}
+	return strings.Join(textParts, "\n")
 }
