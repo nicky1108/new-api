@@ -48,6 +48,12 @@ func normalizeChannelTestEndpoint(channel *model.Channel, modelName, endpointTyp
 	if normalized != "" {
 		return normalized
 	}
+	if common.IsVideoGenerationModel(modelName) {
+		return string(constant.EndpointTypeOpenAIVideo)
+	}
+	if common.IsImageGenerationModel(modelName) {
+		return string(constant.EndpointTypeImageGeneration)
+	}
 	if strings.HasSuffix(modelName, ratio_setting.CompactModelSuffix) {
 		return string(constant.EndpointTypeOpenAIResponseCompact)
 	}
@@ -190,6 +196,9 @@ func testChannel(channel *model.Channel, testModel string, endpointType string, 
 			relayFormat = types.RelayFormatOpenAIImage
 		case constant.EndpointTypeEmbeddings:
 			relayFormat = types.RelayFormatEmbedding
+		case constant.EndpointTypeOpenAIVideo:
+			relayFormat = types.RelayFormatTask
+			c.Set("relay_mode", relayconstant.RelayModeVideoSubmit)
 		default:
 			relayFormat = types.RelayFormatOpenAI
 		}
@@ -217,6 +226,14 @@ func testChannel(channel *model.Channel, testModel string, endpointType string, 
 		if strings.HasPrefix(c.Request.URL.Path, "/v1/responses/compact") {
 			relayFormat = types.RelayFormatOpenAIResponsesCompaction
 		}
+		if c.Request.URL.Path == "/v1/video/generations" || c.Request.URL.Path == "/v1/videos" {
+			relayFormat = types.RelayFormatTask
+			c.Set("relay_mode", relayconstant.RelayModeVideoSubmit)
+		}
+	}
+
+	if relayFormat == types.RelayFormatTask {
+		return testTaskChannel(c, channel, testModel)
 	}
 
 	request := buildTestRequest(testModel, endpointType, channel, isStream)
@@ -502,6 +519,61 @@ func testChannel(channel *model.Channel, testModel string, endpointType string, 
 		context:     c,
 		localErr:    nil,
 		newAPIError: nil,
+	}
+}
+
+func testTaskChannel(c *gin.Context, channel *model.Channel, testModel string) testResult {
+	taskReq := relaycommon.TaskSubmitReq{
+		Model:  testModel,
+		Prompt: "a cute cat",
+	}
+	jsonData, err := common.Marshal(taskReq)
+	if err != nil {
+		return testResult{
+			context:     c,
+			localErr:    err,
+			newAPIError: types.NewError(err, types.ErrorCodeJsonMarshalFailed),
+		}
+	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(jsonData))
+	c.Request.ContentLength = int64(len(jsonData))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("relay_mode", relayconstant.RelayModeVideoSubmit)
+
+	info, err := relaycommon.GenRelayInfo(c, types.RelayFormatTask, nil, nil)
+	if err != nil {
+		return testResult{
+			context:     c,
+			localErr:    err,
+			newAPIError: types.NewError(err, types.ErrorCodeGenRelayInfoFailed),
+		}
+	}
+	info.IsChannelTest = true
+	info.InitChannelMeta(c)
+
+	result, taskErr := relay.RelayTaskSubmit(c, info)
+	if info.Billing != nil {
+		info.Billing.Refund(c)
+	}
+	if taskErr != nil {
+		err := taskErr.Error
+		if err == nil {
+			err = errors.New(taskErr.Message)
+		}
+		statusCode := taskErr.StatusCode
+		if statusCode == 0 {
+			statusCode = http.StatusInternalServerError
+		}
+		return testResult{
+			context:     c,
+			localErr:    err,
+			newAPIError: types.NewOpenAIError(err, types.ErrorCodeBadResponse, statusCode),
+		}
+	}
+	_ = result
+	common.SysLog(fmt.Sprintf("testing task channel #%d with model %s succeeded", channel.Id, testModel))
+	return testResult{
+		context: c,
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -68,4 +69,15 @@ func TestBuildTestLogOtherInjectsTieredInfo(t *testing.T) {
 	require.Equal(t, "tiered_expr", other["billing_mode"])
 	require.Equal(t, "base", other["matched_tier"])
 	require.NotEmpty(t, other["expr_b64"])
+}
+
+func TestNormalizeChannelTestEndpointDetectsXAIImagineModels(t *testing.T) {
+	require.Equal(t,
+		string(constant.EndpointTypeImageGeneration),
+		normalizeChannelTestEndpoint(nil, "grok-imagine-image", ""),
+	)
+	require.Equal(t,
+		string(constant.EndpointTypeOpenAIVideo),
+		normalizeChannelTestEndpoint(nil, "grok-imagine-video", ""),
+	)
 }

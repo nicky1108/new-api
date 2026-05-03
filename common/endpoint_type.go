@@ -2,6 +2,15 @@ package common
 
 import "github.com/QuantumNous/new-api/constant"
 
+func prependEndpointType(endpointTypes []constant.EndpointType, endpointType constant.EndpointType) []constant.EndpointType {
+	for _, existing := range endpointTypes {
+		if existing == endpointType {
+			return endpointTypes
+		}
+	}
+	return append([]constant.EndpointType{endpointType}, endpointTypes...)
+}
+
 // GetEndpointTypesByChannelType 获取渠道最优先端点类型（所有的渠道都支持 OpenAI 端点）
 func GetEndpointTypesByChannelType(channelType int, modelName string) []constant.EndpointType {
 	var endpointTypes []constant.EndpointType
@@ -28,6 +37,9 @@ func GetEndpointTypesByChannelType(channelType int, modelName string) []constant
 		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAI}
 	case constant.ChannelTypeXai:
 		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAI, constant.EndpointTypeOpenAIResponse}
+		if IsVideoGenerationModel(modelName) {
+			endpointTypes = prependEndpointType(endpointTypes, constant.EndpointTypeOpenAIVideo)
+		}
 	case constant.ChannelTypeSora:
 		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAIVideo}
 	default:
@@ -39,7 +51,10 @@ func GetEndpointTypesByChannelType(channelType int, modelName string) []constant
 	}
 	if IsImageGenerationModel(modelName) {
 		// add to first
-		endpointTypes = append([]constant.EndpointType{constant.EndpointTypeImageGeneration}, endpointTypes...)
+		endpointTypes = prependEndpointType(endpointTypes, constant.EndpointTypeImageGeneration)
+	}
+	if IsVideoGenerationModel(modelName) {
+		endpointTypes = prependEndpointType(endpointTypes, constant.EndpointTypeOpenAIVideo)
 	}
 	return endpointTypes
 }
