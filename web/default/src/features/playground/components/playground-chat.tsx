@@ -156,6 +156,9 @@ export function PlaygroundChat({
                                 (message.from === MESSAGE_ROLES.USER ||
                                   !message.isReasoningStreaming) &&
                                 !!version.content
+                              const showMedia =
+                                !!message.media?.url &&
+                                message.from === MESSAGE_ROLES.ASSISTANT
 
                               // Extract visible content (remove <think> tags for assistant messages)
                               const displayContent = isAssistant
@@ -230,16 +233,37 @@ export function PlaygroundChat({
                                       {actions}
                                     </>
                                   ) : (
-                                    showMessageContent && (
+                                    (showMessageContent || showMedia) && (
                                       <>
-                                        <MessageContent
-                                          variant='flat'
-                                          className={cn(
-                                            getMessageContentStyles()
-                                          )}
-                                        >
-                                          <Response>{displayContent}</Response>
-                                        </MessageContent>
+                                        {showMessageContent && (
+                                          <MessageContent
+                                            variant='flat'
+                                            className={cn(
+                                              getMessageContentStyles()
+                                            )}
+                                          >
+                                            <Response>
+                                              {displayContent}
+                                            </Response>
+                                          </MessageContent>
+                                        )}
+                                        {showMedia && (
+                                          <div className='bg-muted/30 mt-2 overflow-hidden rounded-md border'>
+                                            {message.media!.type === 'image' ? (
+                                              <img
+                                                alt=''
+                                                className='max-h-[520px] w-full object-contain'
+                                                src={message.media!.url}
+                                              />
+                                            ) : (
+                                              <video
+                                                className='max-h-[520px] w-full bg-black'
+                                                controls
+                                                src={message.media!.url}
+                                              />
+                                            )}
+                                          </div>
+                                        )}
                                         {actions}
                                       </>
                                     )

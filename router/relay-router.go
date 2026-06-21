@@ -65,6 +65,7 @@ func SetRelayRouter(router *gin.Engine) {
 	playgroundRouter.Use(middleware.UserAuth())
 	{
 		playgroundRouter.GET("/images/jobs/:id", controller.PlaygroundImageJob)
+		playgroundRouter.GET("/videos/:task_id", controller.PlaygroundVideoFetch)
 
 		playgroundRelayRouter := playgroundRouter.Group("")
 		playgroundRelayRouter.Use(middleware.Distribute())
@@ -76,6 +77,7 @@ func SetRelayRouter(router *gin.Engine) {
 		playgroundRelayRouter.POST("/audio/speech", controller.PlaygroundAudio)
 		playgroundRelayRouter.POST("/audio/voices", controller.PlaygroundAudioVoices)
 		playgroundRelayRouter.POST("/music/generations", controller.PlaygroundMusic)
+		playgroundRelayRouter.POST("/videos", controller.PlaygroundVideo)
 	}
 	relayV1Router := router.Group("/v1")
 	relayV1Router.Use(middleware.RouteTag("relay"))

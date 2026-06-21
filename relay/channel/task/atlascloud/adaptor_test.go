@@ -97,8 +97,8 @@ func TestValidateRejectsInvalidAtlasCloudOptions(t *testing.T) {
 			body: `{"model":"atlascloud/model","image":"https://example.com/a.png","prompt":"p","high_noise_loras":["a","b","c","d"]}`,
 		},
 		{
-			name: "missing image",
-			body: `{"model":"atlascloud/model","prompt":"p"}`,
+			name: "missing image for image-to-video model",
+			body: `{"model":"atlascloud/wan-2.2-turbo-spicy/image-to-video-lora","prompt":"p"}`,
 		},
 	}
 
@@ -109,6 +109,26 @@ func TestValidateRejectsInvalidAtlasCloudOptions(t *testing.T) {
 				t.Fatal("ValidateRequestAndSetAction returned nil, want error")
 			}
 		})
+	}
+}
+
+func TestValidateAllowsPromptOnlyAtlasCloudTextToVideo(t *testing.T) {
+	c, _ := newJSONTaskContext(t, `{"model":"kling-v2.0","prompt":"a sunrise over the sea"}`)
+	info := &relaycommon.RelayInfo{}
+
+	if taskErr := (&TaskAdaptor{}).ValidateRequestAndSetAction(c, info); taskErr != nil {
+		t.Fatalf("ValidateRequestAndSetAction returned error: %v", taskErr)
+	}
+
+	req, err := getAtlasCloudRequest(c)
+	if err != nil {
+		t.Fatalf("getAtlasCloudRequest returned error: %v", err)
+	}
+	if req.Image != "" {
+		t.Fatalf("image = %q, want empty for text-to-video", req.Image)
+	}
+	if info.Action == "" {
+		t.Fatal("action was not set")
 	}
 }
 

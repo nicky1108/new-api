@@ -43,7 +43,12 @@ func GetEndpointTypesByChannelType(channelType int, modelName string) []constant
 	case constant.ChannelTypeSora:
 		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAIVideo}
 	case constant.ChannelTypeAtlasCloud:
-		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAIVideo}
+		endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAI}
+		if IsAtlasCloudImageModel(modelName) {
+			endpointTypes = prependEndpointType(endpointTypes, constant.EndpointTypeImageGeneration)
+		} else if IsAtlasCloudVideoModel(modelName) {
+			endpointTypes = prependEndpointType(endpointTypes, constant.EndpointTypeOpenAIVideo)
+		}
 	default:
 		if IsOpenAIResponseOnlyModel(modelName) {
 			endpointTypes = []constant.EndpointType{constant.EndpointTypeOpenAIResponse}

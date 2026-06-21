@@ -123,7 +123,8 @@ export const CHANNEL_TYPE_CONFIGS: Record<number, ChannelTypeConfig> = {
     defaultBaseUrl: 'https://api.atlascloud.ai',
     hints: {
       key: 'AtlasCloud API Key',
-      models: 'atlascloud/wan-2.2-turbo-spicy/image-to-video-lora',
+      models:
+        'deepseek-v3,qwen-turbo,seedream-3.0,kling-v2.0,atlascloud/wan-2.2-turbo-spicy/image-to-video-lora',
       baseUrl: 'Default: https://api.atlascloud.ai',
     },
   },

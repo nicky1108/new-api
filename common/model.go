@@ -22,7 +22,7 @@ var (
 	VideoGenerationModels = []string{
 		"grok-imagine-video",
 		"sora-",
-		"atlascloud/",
+		"atlascloud/wan-2.2-turbo-spicy/image-to-video-lora",
 	}
 	OpenAITextModels = []string{
 		"gpt-",
@@ -76,4 +76,50 @@ func IsOpenAITextModel(modelName string) bool {
 		}
 	}
 	return false
+}
+
+func IsAtlasCloudImageModel(modelName string) bool {
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	for _, marker := range []string{
+		"seedream-",
+		"atlascloud/ghibli",
+		"atlascloud/hidream",
+		"atlascloud/hunyuan-image",
+		"atlascloud/imagen",
+		"atlascloud/image",
+		"atlascloud/neta-lumina",
+		"atlascloud/qwen-image",
+		"atlascloud/real-esrgan",
+		"atlascloud/step1x",
+	} {
+		if strings.Contains(modelName, marker) {
+			return true
+		}
+	}
+	return IsImageGenerationModel(modelName)
+}
+
+func IsAtlasCloudVideoModel(modelName string) bool {
+	modelName = strings.ToLower(strings.TrimSpace(modelName))
+	for _, marker := range []string{
+		"kling-",
+		"kling/",
+		"hailuo",
+		"minimax/video",
+		"runway",
+		"vidu",
+		"image-to-video",
+		"text-to-video",
+		"video-to-video",
+		"i2v",
+		"t2v",
+		"v2v",
+		"-video",
+		"/video",
+	} {
+		if strings.Contains(modelName, marker) {
+			return true
+		}
+	}
+	return IsVideoGenerationModel(modelName)
 }

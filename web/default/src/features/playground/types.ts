@@ -3,6 +3,15 @@ export type MessageRole = 'user' | 'assistant' | 'system'
 
 export type MessageStatus = 'loading' | 'streaming' | 'complete' | 'error'
 
+export type PlaygroundMode = 'chat' | 'image' | 'video'
+
+export type MessageMediaType = 'image' | 'video'
+
+export interface MessageMedia {
+  type: MessageMediaType
+  url: string
+}
+
 export interface MessageVersion {
   id: string
   content: string
@@ -22,6 +31,7 @@ export interface Message {
   isContentComplete?: boolean
   status?: MessageStatus
   errorCode?: string | null
+  media?: MessageMedia
 }
 
 // API payload types
@@ -88,8 +98,54 @@ export interface ChatCompletionResponse {
   }
 }
 
+export interface ImageGenerationRequest {
+  model: string
+  group?: string
+  prompt: string
+  response_format?: 'url'
+}
+
+export interface ImageGenerationResponse {
+  created: number
+  data: Array<{
+    url?: string
+    b64_json?: string
+    revised_prompt?: string
+  }>
+}
+
+export interface VideoGenerationRequest {
+  model: string
+  group?: string
+  prompt: string
+  image?: string
+  duration?: 5 | 8
+  resolution?: '480p' | '720p' | '1080p'
+  seed?: number
+}
+
+export interface VideoGenerationResponse {
+  id: string
+  task_id?: string
+  object: string
+  model: string
+  status: 'queued' | 'in_progress' | 'completed' | 'failed' | 'unknown'
+  progress: number
+  created_at: number
+  completed_at?: number
+  error?: {
+    message?: string
+    code?: string
+  }
+  metadata?: {
+    url?: string
+    video_url?: string
+  }
+}
+
 // Configuration types
 export interface PlaygroundConfig {
+  mode: PlaygroundMode
   model: string
   group: string
   temperature: number
@@ -99,6 +155,9 @@ export interface PlaygroundConfig {
   presence_penalty: number
   seed: number | null
   stream: boolean
+  videoImage: string
+  videoDuration: 5 | 8
+  videoResolution: '480p' | '720p' | '1080p'
 }
 
 export interface ParameterEnabled {

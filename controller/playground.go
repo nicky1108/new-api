@@ -20,7 +20,9 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/relay"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	relayconstant "github.com/QuantumNous/new-api/relay/constant"
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
@@ -40,6 +42,14 @@ func PlaygroundAudio(c *gin.Context) {
 
 func PlaygroundMusic(c *gin.Context) {
 	playgroundRelay(c, types.RelayFormatMiniMaxMusic)
+}
+
+func PlaygroundVideo(c *gin.Context) {
+	playgroundTaskRelay(c, relayconstant.RelayModeVideoSubmit)
+}
+
+func PlaygroundVideoFetch(c *gin.Context) {
+	playgroundTaskRelay(c, relayconstant.RelayModeVideoFetchByID)
 }
 
 type playgroundImageStreamResult struct {
@@ -268,7 +278,7 @@ func randomPlaygroundImageJobID() string {
 func capturePlaygroundImageRelay(original *gin.Context, targetPath string, bodyBytes []byte, requestContext context.Context) (result playgroundImageStreamResult) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			body, _ := json.Marshal(gin.H{
+			body, _ := common.Marshal(gin.H{
 				"error": gin.H{
 					"message": fmt.Sprintf("playground image relay panic: %v", recovered),
 					"type":    "server_error",
@@ -343,9 +353,9 @@ func clonePlaygroundImageRequest(original *http.Request, targetPath string, body
 }
 
 func writePlaygroundImageStreamEvent(c *gin.Context, event string, payload any) {
-	data, err := json.Marshal(payload)
+	data, err := common.Marshal(payload)
 	if err != nil {
-		data, _ = json.Marshal(playgroundImageStreamResult{
+		data, _ = common.Marshal(playgroundImageStreamResult{
 			Status: http.StatusInternalServerError,
 			Body:   json.RawMessage(`{"error":{"message":"failed to encode stream payload","type":"server_error"}}`),
 		})
@@ -404,6 +414,55 @@ func playgroundRelay(c *gin.Context, relayFormat types.RelayFormat) {
 	Relay(c, relayFormat)
 }
 
+func playgroundTaskRelay(c *gin.Context, relayMode int) {
+	var newAPIError *types.NewAPIError
+
+	defer func() {
+		if newAPIError != nil {
+			c.JSON(newAPIError.StatusCode, gin.H{
+				"error": newAPIError.ToOpenAIError(),
+			})
+		}
+	}()
+
+	useAccessToken := c.GetBool("use_access_token")
+	if useAccessToken {
+		newAPIError = types.NewError(errors.New("暂不支持使用 access token"), types.ErrorCodeAccessDenied, types.ErrOptionWithSkipRetry())
+		return
+	}
+
+	userId := c.GetInt("id")
+	userCache, err := model.GetUserCache(userId)
+	if err != nil {
+		newAPIError = types.NewError(err, types.ErrorCodeQueryDataError, types.ErrOptionWithSkipRetry())
+		return
+	}
+	userCache.WriteContext(c)
+
+	group := common.GetContextKeyString(c, constant.ContextKeyUsingGroup)
+	if group == "" {
+		group = common.GetContextKeyString(c, constant.ContextKeyUserGroup)
+	}
+	tempToken := &model.Token{
+		UserId: userId,
+		Name:   fmt.Sprintf("playground-%s", group),
+		Group:  group,
+	}
+	_ = middleware.SetupContextForToken(c, tempToken)
+	c.Set("relay_mode", relayMode)
+
+	switch relayMode {
+	case relayconstant.RelayModeVideoSubmit:
+		RelayTask(c)
+	case relayconstant.RelayModeVideoFetchByID:
+		if taskErr := relay.RelayTaskFetch(c, relayMode); taskErr != nil {
+			respondTaskError(c, taskErr)
+		}
+	default:
+		newAPIError = types.NewError(errors.New("invalid playground task relay mode"), types.ErrorCodeInvalidRequest, types.ErrOptionWithSkipRetry())
+	}
+}
+
 func normalizePlaygroundChatBodyToTextOnly(c *gin.Context) error {
 	bodyStorage, err := common.GetBodyStorage(c)
 	if err != nil {
@@ -438,7 +497,7 @@ func normalizePlaygroundChatBodyToTextOnly(c *gin.Context) error {
 
 func buildTextOnlyPlaygroundChatBody(bodyBytes []byte) ([]byte, bool, error) {
 	var payload map[string]any
-	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
+	if err := common.Unmarshal(bodyBytes, &payload); err != nil {
 		return nil, false, err
 	}
 
@@ -478,7 +537,7 @@ func buildTextOnlyPlaygroundChatBody(bodyBytes []byte) ([]byte, bool, error) {
 	}
 
 	payload["messages"] = normalizedMessages
-	normalizedBody, err := json.Marshal(payload)
+	normalizedBody, err := common.Marshal(payload)
 	if err != nil {
 		return nil, false, err
 	}

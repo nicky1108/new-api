@@ -28,6 +28,7 @@ const (
 )
 
 var ModelList = []string{
+	"kling-v2.0",
 	"atlascloud/wan-2.2-turbo-spicy/image-to-video-lora",
 }
 
@@ -52,7 +53,7 @@ type generateVideoRequest struct {
 	Model          string `json:"model"`
 	Duration       *int   `json:"duration"`
 	HighNoiseLoras []any  `json:"high_noise_loras"`
-	Image          string `json:"image"`
+	Image          string `json:"image,omitempty"`
 	LowNoiseLoras  []any  `json:"low_noise_loras"`
 	Prompt         string `json:"prompt"`
 	Resolution     string `json:"resolution"`
@@ -88,11 +89,13 @@ func (a *TaskAdaptor) Init(info *relaycommon.RelayInfo) {
 		a.baseURL = constant.ChannelBaseURLs[constant.ChannelTypeAtlasCloud]
 		return
 	}
-	a.baseURL = strings.TrimRight(info.ChannelBaseUrl, "/")
+	if info.ChannelMeta != nil {
+		a.baseURL = strings.TrimRight(info.ChannelBaseUrl, "/")
+		a.apiKey = info.ApiKey
+	}
 	if a.baseURL == "" {
 		a.baseURL = constant.ChannelBaseURLs[constant.ChannelTypeAtlasCloud]
 	}
-	a.apiKey = info.ApiKey
 }
 
 func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycommon.RelayInfo) *dto.TaskError {
@@ -107,12 +110,16 @@ func (a *TaskAdaptor) ValidateRequestAndSetAction(c *gin.Context, info *relaycom
 	if info != nil {
 		info.Action = constant.TaskActionGenerate
 	}
+	images := make([]string, 0, 1)
+	if strings.TrimSpace(req.Image) != "" {
+		images = append(images, req.Image)
+	}
 	c.Set("atlascloud_request", req)
 	c.Set("task_request", relaycommon.TaskSubmitReq{
 		Prompt:   req.Prompt,
 		Model:    req.Model,
 		Image:    req.Image,
-		Images:   []string{req.Image},
+		Images:   images,
 		Duration: *req.Duration,
 		Size:     req.Resolution,
 	})
@@ -302,7 +309,7 @@ func validateGenerateVideoRequest(req generateVideoRequest) *dto.TaskError {
 	if strings.TrimSpace(req.Model) == "" {
 		return service.TaskErrorWrapperLocal(fmt.Errorf("model field is required"), "missing_model", http.StatusBadRequest)
 	}
-	if strings.TrimSpace(req.Image) == "" {
+	if atlasCloudVideoRequiresImage(req.Model) && strings.TrimSpace(req.Image) == "" {
 		return service.TaskErrorWrapperLocal(fmt.Errorf("field image is required"), "invalid_request", http.StatusBadRequest)
 	}
 	if strings.TrimSpace(req.Prompt) == "" {
@@ -321,6 +328,16 @@ func validateGenerateVideoRequest(req generateVideoRequest) *dto.TaskError {
 		return service.TaskErrorWrapperLocal(fmt.Errorf("low_noise_loras supports at most 3 items"), "invalid_request", http.StatusBadRequest)
 	}
 	return nil
+}
+
+func atlasCloudVideoRequiresImage(model string) bool {
+	model = strings.ToLower(strings.TrimSpace(model))
+	for _, marker := range []string{"image-to-video", "video-to-video", "i2v", "v2v"} {
+		if strings.Contains(model, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func getAtlasCloudRequest(c *gin.Context) (generateVideoRequest, error) {

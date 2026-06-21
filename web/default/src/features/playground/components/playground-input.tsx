@@ -8,6 +8,8 @@ import {
   GlobeIcon,
   SendIcon,
   SquareIcon,
+  MessageSquareIcon,
+  VideoIcon,
   BarChartIcon,
   BoxIcon,
   NotepadTextIcon,
@@ -16,12 +18,21 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   PromptInput,
   PromptInputButton,
@@ -32,7 +43,7 @@ import {
 } from '@/components/ai-elements/prompt-input'
 import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion'
 import { ModelGroupSelector } from '@/components/model-group-selector'
-import type { ModelOption, GroupOption } from '../types'
+import type { ModelOption, GroupOption, PlaygroundMode } from '../types'
 
 interface PlaygroundInputProps {
   onSubmit: (text: string) => void
@@ -46,6 +57,14 @@ interface PlaygroundInputProps {
   groups: GroupOption[]
   groupValue: string
   onGroupChange: (value: string) => void
+  mode: PlaygroundMode
+  onModeChange: (value: PlaygroundMode) => void
+  videoImage: string
+  onVideoImageChange: (value: string) => void
+  videoDuration: 5 | 8
+  onVideoDurationChange: (value: 5 | 8) => void
+  videoResolution: '480p' | '720p' | '1080p'
+  onVideoResolutionChange: (value: '480p' | '720p' | '1080p') => void
 }
 
 const suggestions = [
@@ -69,6 +88,14 @@ export function PlaygroundInput({
   groups,
   groupValue,
   onGroupChange,
+  mode,
+  onModeChange,
+  videoImage,
+  onVideoImageChange,
+  videoDuration,
+  onVideoDurationChange,
+  videoResolution,
+  onVideoResolutionChange,
 }: PlaygroundInputProps) {
   const { t } = useTranslation()
   const [text, setText] = useState('')
@@ -93,6 +120,16 @@ export function PlaygroundInput({
     onSubmit(suggestion)
   }
 
+  const modeOptions: Array<{
+    value: PlaygroundMode
+    label: string
+    icon: typeof MessageSquareIcon
+  }> = [
+    { value: 'chat', label: t('Chat'), icon: MessageSquareIcon },
+    { value: 'image', label: t('Image'), icon: ImageIcon },
+    { value: 'video', label: t('Video'), icon: VideoIcon },
+  ]
+
   return (
     <div className='grid shrink-0 gap-4 px-1 md:pb-4'>
       <PromptInput
@@ -110,6 +147,77 @@ export function PlaygroundInput({
           placeholder={t('Ask anything')}
           value={text}
         />
+
+        <div className='flex flex-wrap items-center gap-2 border-t px-2.5 py-2'>
+          <div
+            className='border-input flex h-9 items-center gap-1 rounded-full border p-1'
+            aria-label={t('Mode')}
+          >
+            {modeOptions.map(({ value, label, icon: Icon }) => (
+              <PromptInputButton
+                key={value}
+                type='button'
+                className={cn(
+                  'h-7 rounded-full px-2.5 text-xs font-medium',
+                  mode === value
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'text-muted-foreground'
+                )}
+                disabled={disabled}
+                onClick={() => onModeChange(value)}
+                variant={mode === value ? 'default' : 'ghost'}
+              >
+                <Icon size={14} />
+                <span>{label}</span>
+              </PromptInputButton>
+            ))}
+          </div>
+
+          {mode === 'video' && (
+            <div className='flex min-w-0 flex-1 flex-wrap items-center gap-2'>
+              <Select
+                disabled={disabled}
+                value={String(videoDuration)}
+                onValueChange={(value) =>
+                  onVideoDurationChange(Number(value) as 5 | 8)
+                }
+              >
+                <SelectTrigger className='h-8 w-[6.5rem] rounded-full'>
+                  <SelectValue placeholder={t('Duration')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='5'>5s</SelectItem>
+                  <SelectItem value='8'>8s</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                disabled={disabled}
+                value={videoResolution}
+                onValueChange={(value) =>
+                  onVideoResolutionChange(value as '480p' | '720p' | '1080p')
+                }
+              >
+                <SelectTrigger className='h-8 w-[7rem] rounded-full'>
+                  <SelectValue placeholder='720p' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='480p'>480p</SelectItem>
+                  <SelectItem value='720p'>720p</SelectItem>
+                  <SelectItem value='1080p'>1080p</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Input
+                className='h-8 min-w-[12rem] flex-1 rounded-full text-xs'
+                disabled={disabled}
+                onChange={(event) => onVideoImageChange(event.target.value)}
+                placeholder={`${t('Image')} ${t('URL')}`}
+                value={videoImage}
+              />
+            </div>
+          )}
+        </div>
 
         <PromptInputFooter className='p-2.5'>
           <PromptInputTools>
