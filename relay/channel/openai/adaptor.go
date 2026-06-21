@@ -231,6 +231,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
+	normalizeOpenAICompatibleXAIReasoningRequest(info, request)
 	if info.ChannelType != constant.ChannelTypeOpenAI && info.ChannelType != constant.ChannelTypeAzure {
 		request.StreamOptions = nil
 	}
@@ -348,6 +349,69 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	}
 
 	return request, nil
+}
+
+func normalizeOpenAICompatibleXAIReasoningRequest(info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) {
+	if info == nil {
+		return
+	}
+	modelName := info.UpstreamModelName
+	if modelName == "" {
+		modelName = request.Model
+	}
+	normalizedModel := trimXAIProviderPrefix(modelName)
+	if !shouldSanitizeOpenAICompatibleXAIReasoningRequest(info, modelName, normalizedModel) {
+		return
+	}
+	if isXAIBaseURL(info.ChannelBaseUrl) {
+		info.UpstreamModelName = normalizedModel
+		request.Model = normalizedModel
+	}
+	sanitizeOpenAICompatibleXAIReasoningRequest(request)
+}
+
+func shouldSanitizeOpenAICompatibleXAIReasoningRequest(info *relaycommon.RelayInfo, modelName string, normalizedModel string) bool {
+	if isXAIBaseURL(info.ChannelBaseUrl) {
+		return isOpenAICompatibleXAIReasoningModel(normalizedModel)
+	}
+	return strings.HasPrefix(modelName, "xai/") && isOpenAICompatibleXAIReasoningModel(normalizedModel) ||
+		strings.HasPrefix(modelName, "x-ai/") && isOpenAICompatibleXAIReasoningModel(normalizedModel)
+}
+
+func trimXAIProviderPrefix(modelName string) string {
+	modelName = strings.TrimPrefix(modelName, "xai/")
+	return strings.TrimPrefix(modelName, "x-ai/")
+}
+
+func isXAIBaseURL(baseURL string) bool {
+	baseURL = strings.ToLower(baseURL)
+	return strings.Contains(baseURL, "api.x.ai") || strings.Contains(baseURL, "x.ai")
+}
+
+func sanitizeOpenAICompatibleXAIReasoningRequest(request *dto.GeneralOpenAIRequest) {
+	if lo.FromPtrOr(request.MaxCompletionTokens, uint(0)) == 0 && lo.FromPtrOr(request.MaxTokens, uint(0)) != 0 {
+		request.MaxCompletionTokens = request.MaxTokens
+	}
+	request.MaxTokens = nil
+	request.Temperature = nil
+	request.TopP = nil
+	request.FrequencyPenalty = nil
+	request.PresencePenalty = nil
+	request.Stop = nil
+	request.LogProbs = nil
+	request.TopLogProbs = nil
+	request.StreamOptions = nil
+}
+
+func isOpenAICompatibleXAIReasoningModel(modelName string) bool {
+	if strings.Contains(modelName, "-non-reasoning") {
+		return false
+	}
+	return modelName == "grok-4" ||
+		strings.HasPrefix(modelName, "grok-4.") ||
+		strings.HasPrefix(modelName, "grok-4-0709") ||
+		strings.Contains(modelName, "-reasoning") ||
+		strings.HasPrefix(modelName, "grok-3-mini")
 }
 
 func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dto.RerankRequest) (any, error) {

@@ -100,6 +100,7 @@ func normalizeXAIModelName(info *relaycommon.RelayInfo, request *dto.GeneralOpen
 		modelName = info.UpstreamModelName
 	}
 	modelName = strings.TrimPrefix(modelName, "xai/")
+	modelName = strings.TrimPrefix(modelName, "x-ai/")
 	request.Model = modelName
 	if info != nil {
 		info.UpstreamModelName = modelName
@@ -110,9 +111,18 @@ func sanitizeXAIReasoningRequest(request *dto.GeneralOpenAIRequest) {
 	if !isXAIReasoningModel(request.Model) {
 		return
 	}
+	if lo.FromPtrOr(request.MaxCompletionTokens, uint(0)) == 0 && lo.FromPtrOr(request.MaxTokens, uint(0)) != 0 {
+		request.MaxCompletionTokens = request.MaxTokens
+	}
+	request.MaxTokens = nil
+	request.Temperature = nil
+	request.TopP = nil
 	request.FrequencyPenalty = nil
 	request.PresencePenalty = nil
 	request.Stop = nil
+	request.LogProbs = nil
+	request.TopLogProbs = nil
+	request.StreamOptions = nil
 }
 
 func isXAIReasoningModel(modelName string) bool {

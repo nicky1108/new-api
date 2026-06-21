@@ -13,12 +13,31 @@ func floatPtr(v float64) *float64 {
 	return &v
 }
 
+func uintPtr(v uint) *uint {
+	return &v
+}
+
+func boolPtr(v bool) *bool {
+	return &v
+}
+
+func intPtr(v int) *int {
+	return &v
+}
+
 func TestConvertOpenAIRequestSanitizesReasoningModelPlaygroundDefaults(t *testing.T) {
 	req := &dto.GeneralOpenAIRequest{
 		Model:            "xai/grok-4.3",
+		Stream:           boolPtr(true),
+		StreamOptions:    &dto.StreamOptions{IncludeUsage: true},
+		MaxTokens:        uintPtr(4096),
+		Temperature:      floatPtr(0.7),
+		TopP:             floatPtr(1),
 		FrequencyPenalty: floatPtr(0),
 		PresencePenalty:  floatPtr(0),
 		Stop:             []string{"done"},
+		LogProbs:         boolPtr(false),
+		TopLogProbs:      intPtr(0),
 	}
 	info := &relaycommon.RelayInfo{
 		ChannelMeta: &relaycommon.ChannelMeta{
@@ -41,10 +60,22 @@ func TestConvertOpenAIRequestSanitizesReasoningModelPlaygroundDefaults(t *testin
 	if info.UpstreamModelName != "grok-4.3" {
 		t.Fatalf("upstream model = %q, want grok-4.3", info.UpstreamModelName)
 	}
+	if converted.MaxTokens != nil {
+		t.Fatalf("max_tokens should not be forwarded for xAI reasoning models")
+	}
+	if converted.MaxCompletionTokens == nil || *converted.MaxCompletionTokens != 4096 {
+		t.Fatalf("max_completion_tokens = %#v, want 4096", converted.MaxCompletionTokens)
+	}
 
 	encoded, err := common.Marshal(converted)
 	if err != nil {
 		t.Fatalf("marshal converted request: %v", err)
+	}
+	if gjson.GetBytes(encoded, "temperature").Exists() {
+		t.Fatalf("temperature should not be forwarded for xAI reasoning models: %s", encoded)
+	}
+	if gjson.GetBytes(encoded, "top_p").Exists() {
+		t.Fatalf("top_p should not be forwarded for xAI reasoning models: %s", encoded)
 	}
 	if gjson.GetBytes(encoded, "frequency_penalty").Exists() {
 		t.Fatalf("frequency_penalty should not be forwarded for xAI reasoning models: %s", encoded)
@@ -54,6 +85,15 @@ func TestConvertOpenAIRequestSanitizesReasoningModelPlaygroundDefaults(t *testin
 	}
 	if gjson.GetBytes(encoded, "stop").Exists() {
 		t.Fatalf("stop should not be forwarded for xAI reasoning models: %s", encoded)
+	}
+	if gjson.GetBytes(encoded, "logprobs").Exists() {
+		t.Fatalf("logprobs should not be forwarded for xAI reasoning models: %s", encoded)
+	}
+	if gjson.GetBytes(encoded, "top_logprobs").Exists() {
+		t.Fatalf("top_logprobs should not be forwarded for xAI reasoning models: %s", encoded)
+	}
+	if gjson.GetBytes(encoded, "stream_options").Exists() {
+		t.Fatalf("stream_options should not be forwarded for xAI reasoning models: %s", encoded)
 	}
 }
 
