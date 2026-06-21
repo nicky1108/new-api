@@ -104,6 +104,9 @@ func TestConvertImageRequestPreservesAtlasCloudFields(t *testing.T) {
 	if payload["seed"] != float64(0) {
 		t.Fatalf("seed = %#v, want explicit 0", payload["seed"])
 	}
+	if _, exists := payload["size"]; exists {
+		t.Fatalf("size should not be forwarded to AtlasCloud")
+	}
 	if _, exists := payload["group"]; exists {
 		t.Fatalf("group should not be forwarded to AtlasCloud")
 	}

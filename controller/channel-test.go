@@ -227,7 +227,9 @@ func testChannel(channel *model.Channel, testModel string, endpointType string, 
 		if strings.HasPrefix(c.Request.URL.Path, "/v1/responses/compact") {
 			relayFormat = types.RelayFormatOpenAIResponsesCompaction
 		}
-		if c.Request.URL.Path == "/v1/video/generations" || c.Request.URL.Path == "/v1/videos" {
+		if c.Request.URL.Path == "/v1/video/generations" ||
+			c.Request.URL.Path == "/v1/videos" ||
+			c.Request.URL.Path == "/v1/videos/generations" {
 			relayFormat = types.RelayFormatTask
 			c.Set("relay_mode", relayconstant.RelayModeVideoSubmit)
 		}

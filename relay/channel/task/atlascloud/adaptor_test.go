@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
@@ -76,6 +77,61 @@ func TestBuildRequestBodyPreservesAtlasCloudFields(t *testing.T) {
 	}
 	if len(got.LowNoiseLoras) != 1 || got.LowNoiseLoras[0] != "low" {
 		t.Fatalf("low_noise_loras = %#v, want [low]", got.LowNoiseLoras)
+	}
+}
+
+func TestBuildRequestURLStripsVersionedBaseURL(t *testing.T) {
+	info := &relaycommon.RelayInfo{
+		ChannelMeta: &relaycommon.ChannelMeta{
+			ChannelBaseUrl: "https://api.atlascloud.ai/v1",
+			ApiKey:         "test-key",
+		},
+	}
+	adaptor := &TaskAdaptor{}
+	adaptor.Init(info)
+
+	got, err := adaptor.BuildRequestURL(info)
+	if err != nil {
+		t.Fatalf("BuildRequestURL returned error: %v", err)
+	}
+	want := "https://api.atlascloud.ai/api/v1/model/generateVideo"
+	if got != want {
+		t.Fatalf("BuildRequestURL() = %q, want %q", got, want)
+	}
+}
+
+func TestFetchTaskStripsVersionedBaseURL(t *testing.T) {
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		if auth := r.Header.Get("Authorization"); auth != "Bearer test-key" {
+			t.Fatalf("Authorization = %q, want bearer key", auth)
+		}
+		_, _ = w.Write([]byte(`{"code":200,"data":{"id":"prediction_id","status":"completed","outputs":["https://example.com/video.mp4"]}}`))
+	}))
+	defer server.Close()
+
+	resp, err := (&TaskAdaptor{}).FetchTask(server.URL+"/v1", "test-key", map[string]any{
+		"task_id": "prediction_id",
+	}, "")
+	if err != nil {
+		t.Fatalf("FetchTask returned error: %v", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+
+	wantPath := "/api/v1/model/prediction/prediction_id"
+	if gotPath != wantPath {
+		t.Fatalf("prediction path = %q, want %q", gotPath, wantPath)
+	}
+}
+
+func TestFetchTaskRejectsEmptyTaskID(t *testing.T) {
+	_, err := (&TaskAdaptor{}).FetchTask("https://api.atlascloud.ai", "test-key", map[string]any{
+		"task_id": strings.TrimSpace(" "),
+	}, "")
+	if err == nil {
+		t.Fatal("FetchTask returned nil error, want invalid task_id")
 	}
 }
 

@@ -27,6 +27,9 @@ func SetRouter(router *gin.Engine, assets ThemeAssets) {
 	} else {
 		frontendBaseUrl = strings.TrimSuffix(frontendBaseUrl, "/")
 		router.NoRoute(func(c *gin.Context) {
+			if rerouteVideoGenerationsAlias(c, router) {
+				return
+			}
 			c.Set(middleware.RouteTagKey, "web")
 			c.Redirect(http.StatusMovedPermanently, fmt.Sprintf("%s%s", frontendBaseUrl, c.Request.RequestURI))
 		})

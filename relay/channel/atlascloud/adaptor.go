@@ -171,7 +171,14 @@ func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInf
 
 	payload["model"] = modelName
 	payload["prompt"] = prompt
-	for _, key := range []string{"group", "n", "response_format", "stream", "user"} {
+	for _, key := range []string{
+		"group",
+		"n",
+		"response_format",
+		"size",
+		"stream",
+		"user",
+	} {
 		delete(payload, key)
 	}
 	return payload, nil

@@ -86,15 +86,15 @@ type predictionResponse struct {
 
 func (a *TaskAdaptor) Init(info *relaycommon.RelayInfo) {
 	if info == nil {
-		a.baseURL = constant.ChannelBaseURLs[constant.ChannelTypeAtlasCloud]
+		a.baseURL = atlasCloudRootBaseURL("")
 		return
 	}
 	if info.ChannelMeta != nil {
-		a.baseURL = strings.TrimRight(info.ChannelBaseUrl, "/")
+		a.baseURL = atlasCloudRootBaseURL(info.ChannelBaseUrl)
 		a.apiKey = info.ApiKey
 	}
 	if a.baseURL == "" {
-		a.baseURL = constant.ChannelBaseURLs[constant.ChannelTypeAtlasCloud]
+		a.baseURL = atlasCloudRootBaseURL("")
 	}
 }
 
@@ -138,7 +138,11 @@ func (a *TaskAdaptor) EstimateBilling(c *gin.Context, info *relaycommon.RelayInf
 }
 
 func (a *TaskAdaptor) BuildRequestURL(info *relaycommon.RelayInfo) (string, error) {
-	return fmt.Sprintf("%s/api/v1/model/generateVideo", a.baseURL), nil
+	baseURL := a.baseURL
+	if info != nil && info.ChannelMeta != nil && info.ChannelBaseUrl != "" {
+		baseURL = info.ChannelBaseUrl
+	}
+	return fmt.Sprintf("%s/api/v1/model/generateVideo", atlasCloudRootBaseURL(baseURL)), nil
 }
 
 func (a *TaskAdaptor) BuildRequestHeader(c *gin.Context, req *http.Request, info *relaycommon.RelayInfo) error {
@@ -220,7 +224,7 @@ func (a *TaskAdaptor) FetchTask(baseUrl, key string, body map[string]any, proxy 
 	if strings.TrimSpace(baseUrl) == "" {
 		baseUrl = constant.ChannelBaseURLs[constant.ChannelTypeAtlasCloud]
 	}
-	uri := fmt.Sprintf("%s/api/v1/model/prediction/%s", strings.TrimRight(baseUrl, "/"), taskID)
+	uri := fmt.Sprintf("%s/api/v1/model/prediction/%s", atlasCloudRootBaseURL(baseUrl), taskID)
 
 	req, err := http.NewRequest(http.MethodGet, uri, nil)
 	if err != nil {
@@ -350,6 +354,15 @@ func getAtlasCloudRequest(c *gin.Context) (generateVideoRequest, error) {
 		return generateVideoRequest{}, fmt.Errorf("invalid atlascloud request type")
 	}
 	return req, nil
+}
+
+func atlasCloudRootBaseURL(baseURL string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
+		baseURL = strings.TrimRight(constant.ChannelBaseURLs[constant.ChannelTypeAtlasCloud], "/")
+	}
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
+	return strings.TrimRight(baseURL, "/")
 }
 
 func atlasCloudStatusToTaskStatus(status string) string {
