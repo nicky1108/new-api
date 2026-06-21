@@ -12,3 +12,9 @@ func TestGetTaskAdaptorSupportsXAI(t *testing.T) {
 		t.Fatalf("expected xAI channel type to have a task adaptor")
 	}
 }
+
+func TestGetTaskAdaptorSupportsAtlasCloud(t *testing.T) {
+	if adaptor := GetTaskAdaptor(constant.TaskPlatform(strconv.Itoa(constant.ChannelTypeAtlasCloud))); adaptor == nil {
+		t.Fatalf("expected AtlasCloud channel type to have a task adaptor")
+	}
+}

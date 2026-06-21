@@ -116,6 +116,17 @@ export const CHANNEL_TYPE_CONFIGS: Record<number, ChannelTypeConfig> = {
       baseUrl: 'Default: https://api.replicate.com',
     },
   },
+  58: {
+    id: 58,
+    name: CHANNEL_TYPES[58],
+    icon: 'openai',
+    defaultBaseUrl: 'https://api.atlascloud.ai',
+    hints: {
+      key: 'AtlasCloud API Key',
+      models: 'atlascloud/wan-2.2-turbo-spicy/image-to-video-lora',
+      baseUrl: 'Default: https://api.atlascloud.ai',
+    },
+  },
 }
 
 /**

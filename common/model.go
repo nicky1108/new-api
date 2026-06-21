@@ -22,6 +22,7 @@ var (
 	VideoGenerationModels = []string{
 		"grok-imagine-video",
 		"sora-",
+		"atlascloud/",
 	}
 	OpenAITextModels = []string{
 		"gpt-",
