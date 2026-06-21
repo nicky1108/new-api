@@ -20,7 +20,11 @@ func TestConvertOpenAIRequestSanitizesReasoningModelPlaygroundDefaults(t *testin
 		PresencePenalty:  floatPtr(0),
 		Stop:             []string{"done"},
 	}
-	info := &relaycommon.RelayInfo{UpstreamModelName: "xai/grok-4.3"}
+	info := &relaycommon.RelayInfo{
+		ChannelMeta: &relaycommon.ChannelMeta{
+			UpstreamModelName: "xai/grok-4.3",
+		},
+	}
 
 	got, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, req)
 	if err != nil {
@@ -60,7 +64,11 @@ func TestConvertOpenAIRequestSanitizesReasoningSearchVariant(t *testing.T) {
 		PresencePenalty:  floatPtr(0),
 		Stop:             []string{"done"},
 	}
-	info := &relaycommon.RelayInfo{UpstreamModelName: "xai/grok-4.3-search"}
+	info := &relaycommon.RelayInfo{
+		ChannelMeta: &relaycommon.ChannelMeta{
+			UpstreamModelName: "xai/grok-4.3-search",
+		},
+	}
 
 	got, err := (&Adaptor{}).ConvertOpenAIRequest(nil, info, req)
 	if err != nil {
