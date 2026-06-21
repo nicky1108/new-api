@@ -64,9 +64,11 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
+	normalizeXAIModelName(info, request)
 	if strings.HasSuffix(info.UpstreamModelName, "-search") {
 		info.UpstreamModelName = strings.TrimSuffix(info.UpstreamModelName, "-search")
 		request.Model = info.UpstreamModelName
+		sanitizeXAIReasoningRequest(request)
 		toMap := request.ToMap()
 		toMap["search_parameters"] = map[string]any{
 			"mode": "on",
@@ -88,7 +90,40 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 		info.ReasoningEffort = request.ReasoningEffort
 		info.UpstreamModelName = request.Model
 	}
+	sanitizeXAIReasoningRequest(request)
 	return request, nil
+}
+
+func normalizeXAIModelName(info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) {
+	modelName := request.Model
+	if info != nil && info.UpstreamModelName != "" {
+		modelName = info.UpstreamModelName
+	}
+	modelName = strings.TrimPrefix(modelName, "xai/")
+	request.Model = modelName
+	if info != nil {
+		info.UpstreamModelName = modelName
+	}
+}
+
+func sanitizeXAIReasoningRequest(request *dto.GeneralOpenAIRequest) {
+	if !isXAIReasoningModel(request.Model) {
+		return
+	}
+	request.FrequencyPenalty = nil
+	request.PresencePenalty = nil
+	request.Stop = nil
+}
+
+func isXAIReasoningModel(modelName string) bool {
+	if strings.Contains(modelName, "-non-reasoning") {
+		return false
+	}
+	return modelName == "grok-4" ||
+		strings.HasPrefix(modelName, "grok-4.") ||
+		strings.HasPrefix(modelName, "grok-4-0709") ||
+		strings.Contains(modelName, "-reasoning") ||
+		strings.HasPrefix(modelName, "grok-3-mini")
 }
 
 func (a *Adaptor) ConvertRerankRequest(c *gin.Context, relayMode int, request dto.RerankRequest) (any, error) {
